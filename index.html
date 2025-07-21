@@ -769,7 +769,38 @@ We'll test your prompt across ${ais.join(', ')} and email you the detailed compa
 
 Check your email for order confirmation!`);
             
-            // Clear the form
+                                // Clear the form
+                    document.getElementById('liveTestPrompt').value = '';
+                    document.getElementById('testEmail').value = '';
+                    
+                }, function(error) {
+                    console.log('Email failed to send:', error);
+                    
+                    // Still show success to user, but log the error
+                    alert(`🎉 Order confirmed! 
+
+Order #: ${orderNum}
+Cost: ${cost.toFixed(2)}
+
+We'll test your prompt across ${ais.join(', ')} and email you the detailed comparison within 24 hours.
+
+Note: If you don't receive a confirmation email, please contact support@testaitools.online with your order number.`);
+                    
+                    // Clear the form
+                    document.getElementById('liveTestPrompt').value = '';
+                    document.getElementById('testEmail').value = '';
+                    
+                    // Log order details for manual processing
+                    console.log('Live Test Order (Email Failed):', {
+                        orderNum,
+                        prompt,
+                        ais,
+                        email,
+                        cost,
+                        timestamp: new Date()
+                    });
+                });
+        }
             document.getElementById('liveTestPrompt').value = '';
             document.getElementById('testEmail').value = '';
             
@@ -1745,7 +1776,51 @@ Check your email for order confirmation!`);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Navigator - Your AI Tool Companion</title>
+    <title>Test AI Tools - Compare ChatGPT, Claude, Gemini & More | Live AI Testing</title>
+    <meta name="description" content="Test and compare AI tools with your own prompts. Get real responses from ChatGPT, Claude, Gemini, and more. See which AI works best for your specific needs.">
+    <meta name="keywords" content="test ai tools, compare ai, chatgpt vs claude, ai comparison, test chatgpt, ai tool testing, compare artificial intelligence">
+    <meta name="author" content="Test AI Tools">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://testaitools.online/">
+    <meta property="og:title" content="Test AI Tools - Compare ChatGPT, Claude, Gemini & More">
+    <meta property="og:description" content="Test and compare AI tools with your own prompts. Get real responses from ChatGPT, Claude, Gemini, and more.">
+    <meta property="og:image" content="https://testaitools.online/og-image.png">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://testaitools.online/">
+    <meta property="twitter:title" content="Test AI Tools - Compare ChatGPT, Claude, Gemini & More">
+    <meta property="twitter:description" content="Test and compare AI tools with your own prompts. Get real responses from ChatGPT, Claude, Gemini, and more.">
+    <meta property="twitter:image" content="https://testaitools.online/og-image.png">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧪</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧪</text></svg>">
+    
+    <!-- EmailJS -->
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    
+    <!-- JSON-LD Schema -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Test AI Tools",
+      "description": "Test and compare AI tools with your own prompts. Get real responses from ChatGPT, Claude, Gemini, and more.",
+      "url": "https://testaitools.online",
+      "applicationCategory": "ProductivityApplication",
+      "operatingSystem": "Web",
+      "offers": {
+        "@type": "Offer",
+        "price": "5.00",
+        "priceCurrency": "USD",
+        "description": "Live AI testing service"
+      }
+    }
+    </script>
+
     <style>
         * {
             margin: 0;
@@ -2133,8 +2208,8 @@ Check your email for order confirmation!`);
 <body>
     <div class="app-container">
         <div class="header">
-            <h1>🤖 AI Navigator</h1>
-            <p>Your intelligent guide to AI tools</p>
+            <h1>🧪 Test AI Tools</h1>
+            <p>Compare AI responses with your own prompts</p>
         </div>
 
         <div class="nav-tabs">
@@ -2148,7 +2223,7 @@ Check your email for order confirmation!`);
         <div id="discover" class="tab-content active">
             <div class="search-container">
                 <span class="search-icon">🔍</span>
-                <input type="text" class="search-input" placeholder="What do you want to create today?" id="searchInput">
+                <input type="text" class="search-input" placeholder="Find the perfect AI tool for your needs..." id="searchInput">
             </div>
 
             <div class="filter-buttons">
@@ -2167,7 +2242,7 @@ Check your email for order confirmation!`);
         <div id="compare" class="tab-content">
             <div class="search-container">
                 <span class="search-icon">⚡</span>
-                <input type="text" class="search-input" placeholder="Enter a prompt to see how different AIs respond..." id="comparePrompt">
+                <input type="text" class="search-input" placeholder="Test your prompt: 'Write a product description for...'" id="comparePrompt">
             </div>
 
             <div class="filter-buttons">
@@ -2228,7 +2303,22 @@ Check your email for order confirmation!`);
                             • Full responses from each selected AI<br>
                             • Side-by-side comparison<br>
                             • Quality ratings and analysis<br>
-                            • Delivered within 24 hours<br>
+                            • Delivered within 24 hours to support@testaitools.online<br>
+                        </div>
+                    </div>
+                    
+                    <div style="background: rgba(255,255,255,0.15); padding: 16px; border-radius: 8px; margin: 16px 0; border: 2px solid rgba(255,255,255,0.2);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <span style="font-weight: 600;">Order Summary:</span>
+                            <span style="font-size: 18px; font-weight: 700;" id="orderSubtotal">$5.00</span>
+                        </div>
+                        <div style="font-size: 13px; opacity: 0.9;" id="orderBreakdown">
+                            ChatGPT: $1.67<br>
+                            Claude: $1.67<br>
+                            Gemini: $1.67
+                        </div>
+                        <div style="border-top: 1px solid rgba(255,255,255,0.2); margin-top: 8px; padding-top: 8px; font-size: 12px; opacity: 0.8;">
+                            Results delivered within 24 hours
                         </div>
                     </div>
                 </div>
