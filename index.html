@@ -1,4 +1,825 @@
 <script>
+        // Global variables - declare first
+        let currentFilter = 'all';
+        let currentTools = [];
+        let currentComparisons = [];
+        let currentComparisonFilter = 'all';
+        let currentWorkflows = [];
+        let currentWorkflowFilter = 'all';
+
+        const tools = [
+            // Content & Writing
+            {
+                name: "ChatGPT",
+                category: "content",
+                icon: "🤖",
+                color: "linear-gradient(45deg, #10a37f, #1a7f64)",
+                description: "Advanced conversational AI for writing, analysis, and problem-solving",
+                tags: ["Writing", "Analysis", "Coding", "Free Tier", "Chatbot"],
+                useCase: "Perfect for: Content creation, brainstorming, coding help, and complex reasoning tasks"
+            },
+            {
+                name: "Claude",
+                category: "content",
+                icon: "🎭",
+                color: "linear-gradient(45deg, #cc785c, #d4926b)",
+                description: "Helpful AI assistant excellent at analysis, writing, and creative tasks",
+                tags: ["Writing", "Analysis", "Research", "Long Context"],
+                useCase: "Perfect for: Document analysis, research, creative writing, and detailed explanations"
+            },
+            {
+                name: "Jasper",
+                category: "content",
+                icon: "✨",
+                color: "linear-gradient(45deg, #8b5cf6, #a855f7)",
+                description: "AI content creation platform for marketing and business writing",
+                tags: ["Marketing", "Content", "Templates", "Business"],
+                useCase: "Perfect for: Blog posts, ad copy, social media content, and marketing materials"
+            },
+            {
+                name: "Copy.ai",
+                category: "content",
+                icon: "📄",
+                color: "linear-gradient(45deg, #06b6d4, #0891b2)",
+                description: "AI copywriting tool for marketing and sales content",
+                tags: ["Copywriting", "Marketing", "Sales", "Templates"],
+                useCase: "Perfect for: Sales copy, product descriptions, email campaigns, and ads"
+            },
+            {
+                name: "Writesonic",
+                category: "content",
+                icon: "🚀",
+                color: "linear-gradient(45deg, #7c3aed, #a855f7)",
+                description: "AI writing assistant for content creation and SEO optimization",
+                tags: ["SEO", "Content", "Writing", "Optimization"],
+                useCase: "Perfect for: SEO articles, blog posts, landing pages, and content optimization"
+            },
+            {
+                name: "Grammarly",
+                category: "content",
+                icon: "✍️",
+                color: "linear-gradient(45deg, #15c39a, #00b884)",
+                description: "AI writing assistant for grammar, style, and tone",
+                tags: ["Writing", "Grammar", "Editing", "Professional"],
+                useCase: "Perfect for: Email writing, document editing, tone adjustment, and professional communication"
+            },
+            {
+                name: "QuillBot",
+                category: "content",
+                icon: "🪶",
+                color: "linear-gradient(45deg, #3b82f6, #1d4ed8)",
+                description: "AI paraphrasing and writing enhancement tool",
+                tags: ["Paraphrasing", "Writing", "Research", "Academic"],
+                useCase: "Perfect for: Rewriting content, improving clarity, academic writing, and avoiding plagiarism"
+            },
+            {
+                name: "Wordtune",
+                category: "content",
+                icon: "🎵",
+                color: "linear-gradient(45deg, #f59e0b, #d97706)",
+                description: "AI writing companion that helps rewrite and improve text",
+                tags: ["Rewriting", "Editing", "Clarity", "Professional"],
+                useCase: "Perfect for: Improving writing clarity, professional emails, and content enhancement"
+            },
+
+            // Design & Visual
+            {
+                name: "Midjourney",
+                category: "design",
+                icon: "🎨",
+                color: "linear-gradient(45deg, #667eea, #764ba2)",
+                description: "Create stunning AI-generated artwork and images from text descriptions",
+                tags: ["Art", "Design", "Visual", "Commercial", "Images"],
+                useCase: "Perfect for: Marketing visuals, concept art, social media graphics, and creative projects"
+            },
+            {
+                name: "DALL-E 3",
+                category: "design",
+                icon: "🖼️",
+                color: "linear-gradient(45deg, #10a37f, #059669)",
+                description: "OpenAI's advanced image generation AI with high-quality results",
+                tags: ["Images", "Art", "Generation", "High-Quality"],
+                useCase: "Perfect for: Professional imagery, creative concepts, detailed illustrations, and artistic projects"
+            },
+            {
+                name: "Stable Diffusion",
+                category: "design",
+                icon: "🌊",
+                color: "linear-gradient(45deg, #6366f1, #4f46e5)",
+                description: "Open-source AI image generator with customizable models",
+                tags: ["Open Source", "Images", "Customizable", "Free"],
+                useCase: "Perfect for: Custom image generation, artistic experimentation, and open-source projects"
+            },
+            {
+                name: "Canva",
+                category: "design",
+                icon: "🎯",
+                color: "linear-gradient(45deg, #00c4cc, #7b68ee)",
+                description: "AI-enhanced design platform for non-designers",
+                tags: ["Design", "Templates", "Easy", "Marketing"],
+                useCase: "Perfect for: Social media graphics, presentations, marketing materials, and quick designs"
+            },
+            {
+                name: "Adobe Firefly",
+                category: "design",
+                icon: "🔥",
+                color: "linear-gradient(45deg, #ff0000, #cc0000)",
+                description: "Adobe's AI-powered creative suite for images and graphics",
+                tags: ["Adobe", "Professional", "Creative", "Integration"],
+                useCase: "Perfect for: Professional design work, creative projects, and Adobe workflow integration"
+            },
+            {
+                name: "Figma AI",
+                category: "design",
+                icon: "🎪",
+                color: "linear-gradient(45deg, #9333ea, #7c3aed)",
+                description: "AI-powered design features in Figma for UI/UX design",
+                tags: ["UI/UX", "Design", "Prototyping", "Collaboration"],
+                useCase: "Perfect for: UI design, prototyping, design systems, and team collaboration"
+            },
+            {
+                name: "Runway",
+                category: "design",
+                icon: "🎬",
+                color: "linear-gradient(45deg, #ff6b6b, #ee5a24)",
+                description: "AI-powered video generation and editing tools",
+                tags: ["Video", "Animation", "Creative", "Professional"],
+                useCase: "Perfect for: Video content creation, motion graphics, and AI-generated video clips"
+            },
+            {
+                name: "Luma Dream Machine",
+                category: "design",
+                icon: "💫",
+                color: "linear-gradient(45deg, #8b5cf6, #7c3aed)",
+                description: "AI video generation tool for creating realistic video content",
+                tags: ["Video Generation", "Realistic", "Creative", "Content"],
+                useCase: "Perfect for: AI video creation, content marketing, and visual storytelling"
+            },
+
+            // Coding & Development
+            {
+                name: "GitHub Copilot",
+                category: "coding",
+                icon: "👨‍💻",
+                color: "linear-gradient(45deg, #24292e, #586069)",
+                description: "AI pair programmer that helps you write code faster",
+                tags: ["Coding", "Programming", "Automation", "IDE"],
+                useCase: "Perfect for: Code completion, debugging, learning new languages, and productivity"
+            },
+            {
+                name: "Cursor",
+                category: "coding",
+                icon: "⚡",
+                color: "linear-gradient(45deg, #4f46e5, #7c3aed)",
+                description: "AI-first code editor built for productivity",
+                tags: ["IDE", "Coding", "AI-First", "Productivity"],
+                useCase: "Perfect for: AI-assisted coding, codebase understanding, and rapid development"
+            },
+            {
+                name: "Claude for Coding",
+                category: "coding",
+                icon: "🔧",
+                color: "linear-gradient(45deg, #cc785c, #d4926b)",
+                description: "AI assistant specialized in code analysis and programming help",
+                tags: ["Code Analysis", "Debugging", "Programming", "Help"],
+                useCase: "Perfect for: Code reviews, debugging, algorithm design, and programming tutorials"
+            },
+            {
+                name: "Replit AI",
+                category: "coding",
+                icon: "🌐",
+                color: "linear-gradient(45deg, #0f172a, #1e293b)",
+                description: "AI-powered online IDE with collaborative coding features",
+                tags: ["Online IDE", "Collaboration", "Web Development", "Learning"],
+                useCase: "Perfect for: Web development, prototyping, learning to code, and team projects"
+            },
+            {
+                name: "CodeT5",
+                category: "coding",
+                icon: "🤖",
+                color: "linear-gradient(45deg, #059669, #047857)",
+                description: "AI model for code generation, completion, and understanding",
+                tags: ["Code Generation", "Open Source", "Research", "Models"],
+                useCase: "Perfect for: Code generation research, custom implementations, and academic projects"
+            },
+            {
+                name: "TabNine",
+                category: "coding",
+                icon: "📊",
+                color: "linear-gradient(45deg, #3b82f6, #2563eb)",
+                description: "AI code completion tool for multiple programming languages",
+                tags: ["Code Completion", "Multi-Language", "Productivity", "IDE"],
+                useCase: "Perfect for: Code autocompletion, productivity enhancement, and multi-language development"
+            },
+            {
+                name: "Codeium",
+                category: "coding",
+                icon: "💎",
+                color: "linear-gradient(45deg, #10b981, #059669)",
+                description: "Free AI coding assistant with autocomplete and chat features",
+                tags: ["Free", "Code Assistant", "Autocomplete", "Chat"],
+                useCase: "Perfect for: Free code assistance, learning programming, and productivity enhancement"
+            },
+
+            // Business & Productivity
+            {
+                name: "Perplexity",
+                category: "business",
+                icon: "🔍",
+                color: "linear-gradient(45deg, #1fb6ff, #3b82f6)",
+                description: "AI-powered research assistant with real-time information",
+                tags: ["Research", "Search", "Real-time", "Citations"],
+                useCase: "Perfect for: Market research, fact-checking, current events, and academic research"
+            },
+            {
+                name: "Notion AI",
+                category: "business",
+                icon: "📝",
+                color: "linear-gradient(45deg, #000000, #434343)",
+                description: "AI writing assistant integrated into your workspace",
+                tags: ["Productivity", "Writing", "Organization", "Workspace"],
+                useCase: "Perfect for: Note-taking, project management, content creation, and team collaboration"
+            },
+            {
+                name: "Zapier AI",
+                category: "business",
+                icon: "🔗",
+                color: "linear-gradient(45deg, #ff4500, #e03e00)",
+                description: "AI-powered automation platform connecting apps and workflows",
+                tags: ["Automation", "Workflow", "Integration", "Productivity"],
+                useCase: "Perfect for: Business automation, app integration, workflow optimization, and time-saving"
+            },
+            {
+                name: "Microsoft Copilot",
+                category: "business",
+                icon: "🏢",
+                color: "linear-gradient(45deg, #0078d4, #106ebe)",
+                description: "AI assistant integrated into Microsoft 365 applications",
+                tags: ["Microsoft", "Office", "Productivity", "Enterprise"],
+                useCase: "Perfect for: Office productivity, document creation, data analysis, and business workflows"
+            },
+            {
+                name: "Google Bard",
+                category: "business",
+                icon: "🌟",
+                color: "linear-gradient(45deg, #4285f4, #1a73e8)",
+                description: "Google's conversational AI for research and productivity",
+                tags: ["Google", "Research", "Conversational", "Web Access"],
+                useCase: "Perfect for: Web research, current information, creative tasks, and Google integration"
+            },
+            {
+                name: "Otter.ai",
+                category: "business",
+                icon: "🦦",
+                color: "linear-gradient(45deg, #667eea, #764ba2)",
+                description: "AI meeting transcription and note-taking assistant",
+                tags: ["Transcription", "Meetings", "Notes", "Collaboration"],
+                useCase: "Perfect for: Meeting notes, interview transcription, accessibility, and documentation"
+            },
+            {
+                name: "Calendly AI",
+                category: "business",
+                icon: "📅",
+                color: "linear-gradient(45deg, #006bff, #0052cc)",
+                description: "AI-powered scheduling and calendar management tool",
+                tags: ["Scheduling", "Calendar", "Automation", "Business"],
+                useCase: "Perfect for: Meeting scheduling, calendar optimization, and appointment management"
+            },
+            {
+                name: "Salesforce Einstein",
+                category: "business",
+                icon: "⚡",
+                color: "linear-gradient(45deg, #00a1e0, #0070d2)",
+                description: "AI-powered CRM features for sales and customer management",
+                tags: ["CRM", "Sales", "Analytics", "Enterprise"],
+                useCase: "Perfect for: Sales forecasting, customer insights, lead scoring, and CRM automation"
+            },
+
+            // Specialized Tools
+            {
+                name: "ElevenLabs",
+                category: "content",
+                icon: "🎙️",
+                color: "linear-gradient(45deg, #ff6b35, #f7931e)",
+                description: "AI voice synthesis and cloning for audio content",
+                tags: ["Voice", "Audio", "Synthesis", "Content"],
+                useCase: "Perfect for: Voiceovers, podcasts, audiobooks, and voice content creation"
+            },
+            {
+                name: "Synthesia",
+                category: "design",
+                icon: "🎭",
+                color: "linear-gradient(45deg, #9333ea, #7c3aed)",
+                description: "AI video generator with virtual presenters",
+                tags: ["Video", "Avatars", "Presentation", "Training"],
+                useCase: "Perfect for: Training videos, presentations, marketing content, and educational material"
+            },
+            {
+                name: "Murf",
+                category: "content",
+                icon: "🗣️",
+                color: "linear-gradient(45deg, #06b6d4, #0891b2)",
+                description: "AI voice generator for professional voiceovers",
+                tags: ["Voice", "Professional", "Voiceover", "Audio"],
+                useCase: "Perfect for: Professional voiceovers, e-learning, advertisements, and audio content"
+            },
+            {
+                name: "Framer AI",
+                category: "design",
+                icon: "📱",
+                color: "linear-gradient(45deg, #0066ff, #0052cc)",
+                description: "AI-powered website builder and design tool",
+                tags: ["Website", "Builder", "Design", "No-Code"],
+                useCase: "Perfect for: Website creation, landing pages, prototyping, and web design"
+            },
+            {
+                name: "Webflow AI",
+                category: "design",
+                icon: "🌐",
+                color: "linear-gradient(45deg, #4353ff, #3644ff)",
+                description: "AI features in professional web design and development platform",
+                tags: ["Web Design", "Professional", "CMS", "Development"],
+                useCase: "Perfect for: Professional websites, e-commerce, content management, and web development"
+            },
+            {
+                name: "Gamma",
+                category: "business",
+                icon: "📊",
+                color: "linear-gradient(45deg, #ff6b6b, #ee5a24)",
+                description: "AI-powered presentation and document creation tool",
+                tags: ["Presentations", "Documents", "Design", "Business"],
+                useCase: "Perfect for: Business presentations, pitch decks, reports, and professional documents"
+            },
+            {
+                name: "Beautiful.AI",
+                category: "business",
+                icon: "✨",
+                color: "linear-gradient(45deg, #667eea, #764ba2)",
+                description: "AI presentation software with smart design assistance",
+                tags: ["Presentations", "Design", "Templates", "Smart"],
+                useCase: "Perfect for: Professional presentations, slide design, business pitches, and visual storytelling"
+            },
+            {
+                name: "Tome",
+                category: "business",
+                icon: "📖",
+                color: "linear-gradient(45deg, #8b5cf6, #7c3aed)",
+                description: "AI storytelling and presentation platform",
+                tags: ["Storytelling", "Presentations", "Narrative", "Creative"],
+                useCase: "Perfect for: Storytelling presentations, creative pitches, and narrative-driven content"
+            }
+        ];
+
+        const comparisons = [
+            {
+                prompt: "Write a professional email declining a meeting",
+                category: "writing",
+                responses: {
+                    "ChatGPT": {
+                        response: "Subject: Unable to Attend Meeting on [Date]\n\nDear [Name],\n\nThank you for the meeting invitation. Unfortunately, I have a scheduling conflict and won't be able to attend the meeting on [date/time].\n\nI'm interested in the discussion and would appreciate if you could share any key outcomes or decisions made during the meeting. If there's an alternative time that might work better, please let me know.\n\nBest regards,\n[Your name]",
+                        rating: "9/10",
+                        pros: ["Professional tone", "Offers alternative", "Clear and concise"],
+                        cons: ["Generic template feel"]
+                    },
+                    "Claude": {
+                        response: "Subject: Re: Meeting Invitation - Unable to Attend\n\nHi [Name],\n\nI appreciate you thinking of me for the meeting on [date]. Unfortunately, I have a prior commitment that prevents me from attending.\n\nWould it be possible to receive a brief summary of the key discussion points afterward? I'd also be happy to contribute any thoughts or feedback via email if that would be helpful.\n\nIf you're open to rescheduling for a time that works better for everyone, I'd be glad to explore alternative dates.\n\nThank you for understanding.\n\nBest,\n[Your name]",
+                        rating: "9.5/10",
+                        pros: ["Warm but professional", "Offers to contribute", "Flexible approach"],
+                        cons: ["Slightly longer"]
+                    },
+                    "Jasper": {
+                        response: "Subject: Meeting Decline - [Date]\n\nHello [Name],\n\nThank you for inviting me to the meeting scheduled for [date]. I regret to inform you that I will not be able to attend due to a conflicting appointment.\n\nI value the opportunity to contribute to this discussion and would be grateful if you could share the meeting notes with me afterward. Please don't hesitate to reach out if there's anything I can provide in advance or follow up on later.\n\nI apologize for any inconvenience and look forward to future opportunities to collaborate.\n\nSincerely,\n[Your name]",
+                        rating: "8.5/10",
+                        pros: ["Very formal", "Apologetic tone", "Clear structure"],
+                        cons: ["Overly formal", "Wordy"]
+                    }
+                }
+            },
+            {
+                prompt: "Create a catchy tagline for a coffee shop",
+                category: "creative",
+                responses: {
+                    "ChatGPT": {
+                        response: "\"Brew Your Day Better\" - Emphasizing how great coffee improves your entire day, with a nice play on 'brew' as both the coffee-making process and a way to 'stew' or develop something good.",
+                        rating: "8/10",
+                        pros: ["Memorable", "Coffee-specific wordplay", "Positive message"],
+                        cons: ["Fairly common concept"]
+                    },
+                    "Claude": {
+                        response: "\"Where Every Sip Tells a Story\" - This tagline suggests that each cup of coffee is crafted with care and creates memorable moments, appealing to customers who want an experience, not just caffeine.",
+                        rating: "9/10",
+                        pros: ["Emotional connection", "Story-driven", "Premium feel"],
+                        cons: ["Less action-oriented"]
+                    },
+                    "Copy.ai": {
+                        response: "\"Fuel Your Fire\" - Short, punchy, and energetic. Appeals to the motivation and energy that coffee provides. Works for busy professionals and ambitious individuals.",
+                        rating: "7.5/10",
+                        pros: ["Very short", "Energetic", "Motivational"],
+                        cons: ["Generic", "Could apply to energy drinks"]
+                    }
+                }
+            },
+            {
+                prompt: "Write a Python function to find duplicate items in a list",
+                category: "coding",
+                responses: {
+                    "ChatGPT": {
+                        response: "def find_duplicates(lst):\n    seen = set()\n    duplicates = set()\n    for item in lst:\n        if item in seen:\n            duplicates.add(item)\n        else:\n            seen.add(item)\n    return list(duplicates)\n\n# Example usage:\nnumbers = [1, 2, 3, 2, 4, 3, 5]\nprint(find_duplicates(numbers))  # Output: [2, 3]",
+                        rating: "9/10",
+                        pros: ["Efficient O(n)", "Clear logic", "Good example"],
+                        cons: ["No docstring"]
+                    },
+                    "Claude": {
+                        response: "def find_duplicates(items):\n    \"\"\"\n    Find duplicate items in a list.\n    \n    Args:\n        items (list): List to check for duplicates\n        \n    Returns:\n        list: List of duplicate items (without duplicates in result)\n    \"\"\"\n    seen = set()\n    duplicates = set()\n    \n    for item in items:\n        if item in seen:\n            duplicates.add(item)\n        seen.add(item)\n    \n    return list(duplicates)\n\n# Test the function\ntest_list = [1, 2, 3, 2, 4, 3, 5, 1]\nresult = find_duplicates(test_list)\nprint(f\"Duplicates found: {result}\")  # Output: [1, 2, 3]",
+                        rating: "10/10",
+                        pros: ["Full documentation", "Clear variable names", "Comprehensive test"],
+                        cons: ["More verbose"]
+                    },
+                    "GitHub Copilot": {
+                        response: "def find_duplicates(lst):\n    return list(set([x for x in lst if lst.count(x) > 1]))\n\n# Usage\nmy_list = [1, 2, 3, 2, 4, 3, 5]\nduplicates = find_duplicates(my_list)\nprint(duplicates)  # [2, 3]",
+                        rating: "6/10",
+                        pros: ["Very concise", "One-liner logic"],
+                        cons: ["O(n²) complexity", "Less readable", "Inefficient for large lists"]
+                    }
+                }
+            }
+        ];
+
+        const workflows = [
+            {
+                name: "Blog Post Creation",
+                category: "content",
+                icon: "📝",
+                color: "linear-gradient(45deg, #667eea, #764ba2)",
+                description: "Complete blog post creation from research to publication",
+                steps: ["Research Topic", "Create Outline", "Write Content", "Edit & Polish", "Design Graphics", "SEO Optimize"],
+                tools: ["Perplexity", "ChatGPT", "Grammarly", "Canva", "Writesonic"],
+                timeEstimate: "2-3 hours",
+                difficulty: "Beginner",
+                tags: ["Writing", "SEO", "Content Marketing"]
+            },
+            {
+                name: "Social Media Campaign",
+                category: "marketing",
+                icon: "📱",
+                color: "linear-gradient(45deg, #a8edea, #fed6e3)",
+                description: "Create and schedule complete social media campaign",
+                steps: ["Research Trends", "Create Copy", "Design Graphics", "Generate Videos", "Schedule Posts", "Track Performance"],
+                tools: ["Perplexity", "Copy.ai", "Canva", "Luma Dream Machine", "Buffer"],
+                timeEstimate: "3-5 hours",
+                difficulty: "Beginner",
+                tags: ["Social Media", "Marketing", "Automation"]
+            }
+        ];
+
+        // Initialize arrays after data is defined
+        currentTools = tools;
+        currentComparisons = comparisons;
+        currentWorkflows = workflows;
+
+        // All functions defined here - after variables are declared
+        function renderTools(toolsToRender = currentTools) {
+            const container = document.getElementById('toolsContainer');
+            if (!container) return;
+            
+            container.innerHTML = toolsToRender.map(tool => `
+                <div class="tool-card" onclick="showToolDetails('${tool.name}')">
+                    <div class="tool-header">
+                        <div class="tool-icon" style="background: ${tool.color};">${tool.icon}</div>
+                        <div>
+                            <div class="tool-name">${tool.name}</div>
+                            <div class="tool-category">${tool.category.toUpperCase()}</div>
+                        </div>
+                    </div>
+                    <div class="tool-description">${tool.description}</div>
+                    <div class="tool-tags">
+                        ${tool.tags.map(tag => `<span class="tool-tag">${tag}</span>`).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderComparisons(comparisonsToRender = currentComparisons) {
+            const container = document.getElementById('comparisonsContainer');
+            if (!container) return;
+            
+            container.innerHTML = comparisonsToRender.map(comparison => `
+                <div class="tool-card" onclick="showComparisonDetails('${comparison.prompt}')">
+                    <div style="margin-bottom: 16px;">
+                        <div class="tool-name" style="font-size: 16px;">"${comparison.prompt}"</div>
+                        <div class="tool-category">${comparison.category.toUpperCase()} COMPARISON</div>
+                    </div>
+                    
+                    <div style="display: grid; gap: 12px;">
+                        ${Object.entries(comparison.responses).map(([ai, data]) => `
+                            <div style="background: #f8fafc; border-radius: 8px; padding: 12px; border-left: 4px solid ${getAIColor(ai)};">
+                                <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 6px;">
+                                    <div style="font-weight: 600; color: #1e293b; font-size: 14px;">${ai}</div>
+                                    <div style="background: ${getAIColor(ai)}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; margin-left: auto;">${data.rating}</div>
+                                </div>
+                                <div style="font-size: 13px; color: #64748b; line-height: 1.4;">
+                                    ${data.response.substring(0, 120)}${data.response.length > 120 ? '...' : ''}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    <div style="margin-top: 12px; text-align: center;">
+                        <span style="font-size: 12px; color: #64748b;">Click to see full comparison</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderWorkflows(workflowsToRender = currentWorkflows) {
+            const container = document.getElementById('workflowsContainer');
+            if (!container) return;
+            
+            container.innerHTML = workflowsToRender.map(workflow => `
+                <div class="tool-card" onclick="showWorkflowDetails('${workflow.name}')">
+                    <div class="tool-header">
+                        <div class="tool-icon" style="background: ${workflow.color};">${workflow.icon}</div>
+                        <div>
+                            <div class="tool-name">${workflow.name}</div>
+                            <div class="tool-category">${workflow.category.toUpperCase()} • ${workflow.timeEstimate} • ${workflow.difficulty}</div>
+                        </div>
+                    </div>
+                    <div class="tool-description">${workflow.description}</div>
+                    <div style="margin: 12px 0; padding: 12px; background: #f8fafc; border-radius: 8px;">
+                        <div style="font-size: 12px; font-weight: 600; color: #64748b; margin-bottom: 6px;">WORKFLOW STEPS:</div>
+                        <div style="font-size: 13px; color: #475569;">${workflow.steps.join(' → ')}</div>
+                    </div>
+                    <div class="tool-tags">
+                        ${workflow.tags.map(tag => `<span class="tool-tag">${tag}</span>`).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function getAIColor(aiName) {
+            const colors = {
+                'ChatGPT': '#10a37f',
+                'Claude': '#cc785c',
+                'Jasper': '#8b5cf6',
+                'Copy.ai': '#06b6d4',
+                'GitHub Copilot': '#24292e',
+                'Google Bard': '#4285f4'
+            };
+            return colors[aiName] || '#6366f1';
+        }
+
+        function filterTools(category) {
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            currentFilter = category;
+            if (category === 'all') {
+                currentTools = tools;
+            } else {
+                currentTools = tools.filter(tool => tool.category === category);
+            }
+            renderTools(currentTools);
+        }
+
+        function filterComparisons(category) {
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            currentComparisonFilter = category;
+            if (category === 'all') {
+                currentComparisons = comparisons;
+            } else {
+                currentComparisons = comparisons.filter(comparison => comparison.category === category);
+            }
+            renderComparisons(currentComparisons);
+        }
+
+        function filterWorkflows(category) {
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            currentWorkflowFilter = category;
+            if (category === 'all') {
+                currentWorkflows = workflows;
+            } else {
+                currentWorkflows = workflows.filter(workflow => workflow.category === category);
+            }
+            renderWorkflows(currentWorkflows);
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+        }
+
+        function showToolDetails(toolName) {
+            const tool = tools.find(t => t.name === toolName);
+            alert(`${tool.name}\n\n${tool.description}\n\n${tool.useCase}\n\nTags: ${tool.tags.join(', ')}`);
+        }
+
+        function showComparisonDetails(prompt) {
+            const comparison = comparisons.find(c => c.prompt === prompt);
+            let detailText = `"${prompt}"\n\n`;
+            
+            Object.entries(comparison.responses).forEach(([ai, data]) => {
+                detailText += `${ai} (${data.rating}):\n${data.response}\n\n`;
+                detailText += `Pros: ${data.pros.join(', ')}\n`;
+                detailText += `Cons: ${data.cons.join(', ')}\n\n---\n\n`;
+            });
+            
+            alert(detailText);
+        }
+
+        function showWorkflowDetails(workflowName) {
+            const workflow = workflows.find(w => w.name === workflowName);
+            const toolsList = workflow.tools.join(', ');
+            const stepsList = workflow.steps.map((step, index) => `${index + 1}. ${step}`).join('\n');
+            
+            alert(`${workflow.name}\n\n${workflow.description}\n\nTime: ${workflow.timeEstimate}\nDifficulty: ${workflow.difficulty}\n\nSteps:\n${stepsList}\n\nRecommended Tools:\n${toolsList}\n\nTags: ${workflow.tags.join(', ')}`);
+        }
+
+        function copyPrompt(button) {
+            const promptText = button.previousElementSibling.textContent;
+            navigator.clipboard.writeText(promptText).then(() => {
+                button.textContent = 'Copied!';
+                setTimeout(() => {
+                    button.textContent = 'Copy Template';
+                }, 2000);
+            });
+        }
+
+        function openQuickStart() {
+            document.getElementById('quickStartModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('quickStartModal').classList.remove('active');
+        }
+
+        function quickAction(action) {
+            closeModal();
+            
+            const actionMap = {
+                'write': { tab: 'prompts', filter: 'content' },
+                'design': { tab: 'discover', filter: 'design' },
+                'analyze': { tab: 'discover', filter: 'business' },
+                'code': { tab: 'discover', filter: 'coding' },
+                'research': { tab: 'discover', filter: 'business' }
+            };
+            
+            const targetAction = actionMap[action];
+            
+            document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            if (targetAction.tab === 'prompts') {
+                document.querySelector('[onclick="switchTab(\'prompts\')"]').classList.add('active');
+                document.getElementById('prompts').classList.add('active');
+            } else {
+                document.querySelector('[onclick="switchTab(\'discover\')"]').classList.add('active');
+                document.getElementById('discover').classList.add('active');
+                
+                if (targetAction.filter !== 'all') {
+                    setTimeout(() => {
+                        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+                        document.querySelector(`[onclick="filterTools('${targetAction.filter}')"]`).classList.add('active');
+                        filterTools(targetAction.filter);
+                    }, 100);
+                }
+            }
+        }
+
+        function requestComparison() {
+            const prompt = document.getElementById('comparePrompt').value;
+            if (prompt.trim()) {
+                alert(`Thanks for the suggestion! We'll test "${prompt}" across different AIs and add it to our comparisons soon.`);
+                document.getElementById('comparePrompt').value = '';
+            } else {
+                alert('Please enter a prompt you\'d like us to test across different AIs.');
+            }
+        }
+
+        // Wait for DOM to be ready before setting up event listeners and initializing
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize the app
+            renderTools();
+            renderWorkflows();
+            renderComparisons();
+
+            // Search functionality for Discover tab
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.addEventListener('input', function(e) {
+                    const searchTerm = e.target.value.toLowerCase();
+                    if (searchTerm === '') {
+                        currentTools = currentFilter === 'all' ? tools : tools.filter(tool => tool.category === currentFilter);
+                    } else {
+                        const filteredByCategory = currentFilter === 'all' ? tools : tools.filter(tool => tool.category === currentFilter);
+                        
+                        currentTools = filteredByCategory.filter(tool => {
+                            const searchIn = [
+                                tool.name.toLowerCase(),
+                                tool.description.toLowerCase(),
+                                tool.useCase.toLowerCase(),
+                                ...tool.tags.map(tag => tag.toLowerCase())
+                            ].join(' ');
+                            
+                            const searchTerms = searchTerm.split(' ').filter(term => term.length > 0);
+                            return searchTerms.every(term => searchIn.includes(term));
+                        });
+
+                        if (currentTools.length === 0) {
+                            const commonTerms = {
+                                'website': ['web', 'site', 'builder', 'design'],
+                                'video': ['video', 'animation', 'motion'],
+                                'writing': ['writing', 'content', 'text', 'copy'],
+                                'image': ['image', 'visual', 'art', 'design', 'photo'],
+                                'voice': ['voice', 'audio', 'speech', 'sound'],
+                                'presentation': ['presentation', 'slide', 'pitch'],
+                                'research': ['research', 'search', 'information', 'data'],
+                                'automation': ['automation', 'workflow', 'integrate'],
+                                'meeting': ['meeting', 'transcription', 'notes'],
+                                'schedule': ['schedule', 'calendar', 'appointment']
+                            };
+
+                            for (const [key, synonyms] of Object.entries(commonTerms)) {
+                                if (searchTerm.includes(key)) {
+                                    currentTools = filteredByCategory.filter(tool => {
+                                        const searchIn = [
+                                            tool.name.toLowerCase(),
+                                            tool.description.toLowerCase(),
+                                            tool.useCase.toLowerCase(),
+                                            ...tool.tags.map(tag => tag.toLowerCase())
+                                        ].join(' ');
+                                        
+                                        return synonyms.some(synonym => searchIn.includes(synonym));
+                                    });
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    renderTools(currentTools);
+                });
+            }
+
+            // Comparison search functionality
+            const comparePrompt = document.getElementById('comparePrompt');
+            if (comparePrompt) {
+                comparePrompt.addEventListener('input', function(e) {
+                    const searchTerm = e.target.value.toLowerCase();
+                    if (searchTerm === '') {
+                        currentComparisons = currentComparisonFilter === 'all' ? comparisons : comparisons.filter(comparison => comparison.category === currentComparisonFilter);
+                    } else {
+                        const filteredByCategory = currentComparisonFilter === 'all' ? comparisons : comparisons.filter(comparison => comparison.category === currentComparisonFilter);
+                        currentComparisons = filteredByCategory.filter(comparison => {
+                            return comparison.prompt.toLowerCase().includes(searchTerm) || 
+                                   comparison.category.toLowerCase().includes(searchTerm);
+                        });
+                    }
+                    renderComparisons(currentComparisons);
+                });
+            }
+
+            // Workflow search functionality  
+            const workflowSearch = document.getElementById('workflowSearch');
+            if (workflowSearch) {
+                workflowSearch.addEventListener('input', function(e) {
+                    const searchTerm = e.target.value.toLowerCase();
+                    if (searchTerm === '') {
+                        currentWorkflows = currentWorkflowFilter === 'all' ? workflows : workflows.filter(workflow => workflow.category === currentWorkflowFilter);
+                    } else {
+                        const filteredByCategory = currentWorkflowFilter === 'all' ? workflows : workflows.filter(workflow => workflow.category === currentWorkflowFilter);
+                        currentWorkflows = filteredByCategory.filter(workflow => {
+                            const searchIn = [
+                                workflow.name.toLowerCase(),
+                                workflow.description.toLowerCase(),
+                                ...workflow.tags.map(tag => tag.toLowerCase()),
+                                ...workflow.steps.map(step => step.toLowerCase()),
+                                ...workflow.tools.map(tool => tool.toLowerCase())
+                            ].join(' ');
+                            
+                            return searchIn.includes(searchTerm);
+                        });
+                    }
+                    renderWorkflows(currentWorkflows);
+                });
+            }
+
+            // Close modal when clicking outside
+            const quickStartModal = document.getElementById('quickStartModal');
+            if (quickStartModal) {
+                quickStartModal.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        closeModal();
+                    }
+                });
+            }
+        });
+    </script>    <script>
         const tools = [
             // Content & Writing
             {
