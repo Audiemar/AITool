@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Navigator - Your AI Tool Companion</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .app-container {
+            max-width: 414px;
+            margin: 0 auto;
+            background: white;
+            min-height: 100vh;
+            box-shadow: 0 0 30px rgba(0,0,0,0.2);
+            position: relative;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 60px 20px 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: pulse 4s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+            position: relative;
+            z-index: 2;
+        }
+
+        .nav-tabs {
+            display: flex;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .nav-tab {
+            flex: 1;
+            padding: 15px 10px;
+            text-align: center;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #64748b;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .nav-tab.active {
+            color: #4f46e5;
+            background: white;
+        }
+
+        .nav-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #4f46e5, #7c3aed);
+        }
+
+        .tab-content {
+            display: none;
+            padding: 20px;
+            min-height: 60vh;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .search-container {
+            position: relative;
+            margin-bottom: 25px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 15px 20px 15px 50px;
+            border: 2px solid #e2e8f0;
+            border-radius: 25px;
+            font-size: 16px;
+            background: #f8fafc;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #4f46e5;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #64748b;
+            font-size: 18px;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 20px;
+            background: white;
+            color: #64748b;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .filter-btn.active {
+            background: #4f46e5;
+            color: white;
+            border-color: #4f46e5;
+        }
+
+        .tool-card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            border: 1px solid #f1f5f9;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .tool-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .tool-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .tool-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            margin-right: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: white;
+        }
+
+        .tool-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 2px;
+        }
+
+        .tool-category {
+            font-size: 12px;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .tool-description {
+            color: #475569;
+            font-size: 14px;
+            line-height: 1.5;
+            margin-bottom: 12px;
+        }
+
+        .tool-tags {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .tool-tag {
+            background: #f1f5f9;
+            color: #475569;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+
+        .prompt-template {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .prompt-title {
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+
+        .prompt-text {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 14px;
+            color: #374151;
+            border: 1px solid #e5e7eb;
+            margin-bottom: 10px;
+        }
+
+        .copy-btn {
+            background: #4f46e5;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .copy-btn:hover {
+            background: #4338ca;
+        }
+
+        .learning-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 15px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .learning-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
+            border-radius: 50%;
+            transform: translate(30px, -30px);
+        }
+
+        .learning-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .learning-description {
+            font-size: 14px;
+            opacity: 0.9;
+            line-height: 1.5;
+        }
+
+        .progress-bar {
+            background: rgba(255,255,255,0.2);
+            height: 6px;
+            border-radius: 3px;
+            margin-top: 12px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            background: white;
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        .floating-action {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(79, 70, 229, 0.4);
+            transition: transform 0.3s ease;
+        }
+
+        .floating-action:hover {
+            transform: scale(1.1);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 90%;
+            max-height: 80%;
+            overflow-y: auto;
+        }
+
+        .close-btn {
+            float: right;
+            font-size: 24px;
+            cursor: pointer;
+            color: #64748b;
+        }
+
+        @media (max-width: 414px) {
+            .app-container {
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="header">
+            <h1>🤖 AI Navigator</h1>
+            <p>Your intelligent guide to AI tools</p>
+        </div>
+
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="switchTab('discover')">Discover</button>
+            <button class="nav-tab" onclick="switchTab('compare')">Compare</button>
+            <button class="nav-tab" onclick="switchTab('prompts')">Prompts</button>
+            <button class="nav-tab" onclick="switchTab('learn')">Learn</button>
+            <button class="nav-tab" onclick="switchTab('workflow')">Workflow</button>
+        </div>
+
+        <div id="discover" class="tab-content active">
+            <div class="search-container">
+                <span class="search-icon">🔍</span>
+                <input type="text" class="search-input" placeholder="What do you want to create today?" id="searchInput">
+            </div>
+
+            <div class="filter-buttons">
+                <button class="filter-btn active" onclick="filterTools('all')">All</button>
+                <button class="filter-btn" onclick="filterTools('content')">Content</button>
+                <button class="filter-btn" onclick="filterTools('coding')">Coding</button>
+                <button class="filter-btn" onclick="filterTools('design')">Design</button>
+                <button class="filter-btn" onclick="filterTools('business')">Business</button>
+            </div>
+
+            <div id="toolsContainer">
+                <!-- Tools will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <div id="compare" class="tab-content">
+            <div class="search-container">
+                <span class="search-icon">⚡</span>
+                <input type="text" class="search-input" placeholder="Enter a prompt to see how different AIs respond..." id="comparePrompt">
+            </div>
+
+            <div class="filter-buttons">
+                <button class="filter-btn active" onclick="filterComparisons('all')">All Tests</button>
+                <button class="filter-btn" onclick="filterComparisons('writing')">Writing</button>
+                <button class="filter-btn" onclick="filterComparisons('creative')">Creative</button>
+                <button class="filter-btn" onclick="filterComparisons('coding')">Coding</button>
+                <button class="filter-btn" onclick="filterComparisons('business')">Business</button>
+            </div>
+
+            <div id="comparisonsContainer">
+                <!-- Comparisons will be populated by JavaScript -->
+            </div>
+
+            <div style="margin-top: 20px; padding: 16px; background: #f8fafc; border-radius: 12px; border: 2px dashed #e2e8f0;">
+                <div style="text-align: center; color: #64748b;">
+                    <div style="font-size: 20px; margin-bottom: 8px;">🧪</div>
+                    <div style="font-weight: 600; margin-bottom: 4px;">Request a Comparison</div>
+                    <div style="font-size: 14px;">Want to see how different AIs handle your specific prompt?</div>
+                    <button class="copy-btn" style="margin-top: 8px;" onclick="requestComparison()">Request Test</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="prompts" class="tab-content">
+            <div class="search-container">
+                <span class="search-icon">💡</span>
+                <input type="text" class="search-input" placeholder="Search prompt templates...">
+            </div>
+
+            <div class="prompt-template">
+                <div class="prompt-title">📝 Content Creation</div>
+                <div class="prompt-text">Write a [type] about [topic] for [audience]. Make it [tone] and include [specific elements]. Format it as [structure].</div>
+                <button class="copy-btn" onclick="copyPrompt(this)">Copy Template</button>
+            </div>
+
+            <div class="prompt-template">
+                <div class="prompt-title">🎨 Image Generation</div>
+                <div class="prompt-text">Create a [style] image of [subject] in [setting]. Use [color palette] colors. The mood should be [emotion]. Add [specific details].</div>
+                <button class="copy-btn" onclick="copyPrompt(this)">Copy Template</button>
+            </div>
+
+            <div class="prompt-template">
+                <div class="prompt-title">💼 Business Analysis</div>
+                <div class="prompt-text">Analyze [business aspect] for [company/industry]. Consider [factors]. Provide [type of recommendations] with [timeframe] and [success metrics].</div>
+                <button class="copy-btn" onclick="copyPrompt(this)">Copy Template</button>
+            </div>
+
+            <div class="prompt-template">
+                <div class="prompt-title">🔧 Code Generation</div>
+                <div class="prompt-text">Write [language] code that [functionality]. Use [framework/library]. Include [requirements]. Add comments and error handling.</div>
+                <button class="copy-btn" onclick="copyPrompt(this)">Copy Template</button>
+            </div>
+        </div>
+
+        <div id="learn" class="tab-content">
+            <div class="learning-card">
+                <div class="learning-title">🚀 AI Fundamentals</div>
+                <div class="learning-description">Master the basics of prompt engineering, AI tool selection, and best practices for getting better results.</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 75%"></div>
+                </div>
+            </div>
+
+            <div class="learning-card">
+                <div class="learning-title">🎯 Advanced Prompting</div>
+                <div class="learning-description">Learn advanced techniques like chain-of-thought prompting, few-shot learning, and prompt optimization.</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 45%"></div>
+                </div>
+            </div>
+
+            <div class="learning-card">
+                <div class="learning-title">🔄 AI Workflows</div>
+                <div class="learning-description">Build powerful workflows that combine multiple AI tools for complex tasks and automation.</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 20%"></div>
+                </div>
+            </div>
+
+            <div class="learning-card">
+                <div class="learning-title">⚡ Productivity Hacks</div>
+                <div class="learning-description">Time-saving tricks, keyboard shortcuts, and efficiency tips for popular AI tools.</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 60%"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="workflow" class="tab-content">
+            <div class="search-container">
+                <span class="search-icon">⚡</span>
+                <input type="text" class="search-input" placeholder="What do you want to accomplish?" id="workflowSearch">
+            </div>
+
+            <div class="filter-buttons">
+                <button class="filter-btn active" onclick="filterWorkflows('all')">All</button>
+                <button class="filter-btn" onclick="filterWorkflows('content')">Content</button>
+                <button class="filter-btn" onclick="filterWorkflows('marketing')">Marketing</button>
+                <button class="filter-btn" onclick="filterWorkflows('business')">Business</button>
+                <button class="filter-btn" onclick="filterWorkflows('creative')">Creative</button>
+            </div>
+
+            <div id="workflowsContainer">
+                <!-- Workflows will be populated by JavaScript -->
+            </div>
+
+            <div style="margin-top: 20px; padding: 16px; background: #f8fafc; border-radius: 12px; border: 2px dashed #e2e8f0;">
+                <div style="text-align: center; color: #64748b;">
+                    <div style="font-size: 20px; margin-bottom: 8px;">🛠️</div>
+                    <div style="font-weight: 600; margin-bottom: 4px;">Custom Workflow Builder</div>
+                    <div style="font-size: 14px;">Coming Soon: Drag & drop to create your own workflows</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="floating-action" onclick="openQuickStart()">
+        ⚡
+    </div>
+
+    <div id="quickStartModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal()">&times;</span>
+            <h2>🚀 Quick Start</h2>
+            <p style="margin: 16px 0;">What would you like to do right now?</p>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <button class="filter-btn" style="width: 100%; text-align: left; padding: 12px 16px;" onclick="quickAction('write')">✍️ Write something</button>
+                <button class="filter-btn" style="width: 100%; text-align: left; padding: 12px 16px;" onclick="quickAction('design')">🎨 Create a design</button>
+                <button class="filter-btn" style="width: 100%; text-align: left; padding: 12px 16px;" onclick="quickAction('analyze')">📊 Analyze data</button>
+                <button class="filter-btn" style="width: 100%; text-align: left; padding: 12px 16px;" onclick="quickAction('code')">💻 Write code</button>
+                <button class="filter-btn" style="width: 100%; text-align: left; padding: 12px 16px;" onclick="quickAction('research')">🔍 Research topic</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const tools = [
+            // Content & Writing
+            {
+                name: "ChatGPT",
+                category: "content",
+                icon: "🤖",
+                color: "linear-gradient(45deg, #10a37f, #1a7f64)",
+                description: "Advanced conversational AI for writing, analysis, and problem-solving",
+                tags: ["Writing", "Analysis", "Coding", "Free Tier", "Chatbot"],
+                useCase: "Perfect for: Content creation, brainstorming, coding help, and complex reasoning tasks"
+            },
+            {
+                name: "Claude",
+                category: "content",
+                icon: "🎭",
+                color: "linear-gradient(45deg, #cc785c, #d4926b)",
+                description: "Helpful AI assistant excellent at analysis, writing, and creative tasks",
+                tags: ["Writing", "Analysis", "Research", "Long Context"],
+                useCase: "Perfect for: Document analysis, research, creative writing, and detailed explanations"
+            },
+            {
+                name: "Jasper",
+                category: "content",
+                icon: "✨",
+                color: "linear-gradient(45deg, #8b5cf6, #a855f7)",
+                description: "AI content creation platform for marketing and business writing",
+                tags: ["Marketing", "Content", "Templates", "Business"],
+                useCase: "Perfect for: Blog posts, ad copy, social media content, and marketing materials"
+            },
+            {
+                name: "Copy.ai",
+                category: "content",
+                icon: "📄",
+                color: "linear-gradient(45deg, #06b6d4, #0891b2)",
+                description: "AI copywriting tool for marketing and sales content",
+                tags: ["Copywriting", "Marketing", "Sales", "Templates"],
+                useCase: "Perfect for: Sales copy, product descriptions, email campaigns, and ads"
+            },
+            {
+                name: "Writesonic",
+                category: "content",
+                icon: "🚀",
+                color: "linear-gradient(45deg, #7c3aed, #a855f7)",
+                description: "AI writing assistant for content creation and SEO optimization",
+                tags: ["SEO", "Content", "Writing", "Optimization"],
+                useCase: "Perfect for: SEO articles, blog posts, landing pages, and content optimization"
+            },
+            {
+                name: "Grammarly",
+                category: "content",
+                icon: "✍️",
+                color: "linear-gradient(45deg, #15c39a, #00b884)",
+                description: "AI writing assistant for grammar, style, and tone",
+                tags: ["Writing", "Grammar", "Editing", "Professional"],
+                useCase: "Perfect for: Email writing, document editing, tone adjustment, and professional communication"
+            },
+            {
+                name: "QuillBot",
+                category: "content",
+                icon: "🪶",
+                color: "linear-gradient(45deg, #3b82f6, #1d4ed8)",
+                description: "AI paraphrasing and writing enhancement tool",
+                tags: ["Paraphrasing", "Writing", "Research", "Academic"],
+                useCase: "Perfect for: Rewriting content, improving clarity, academic writing, and avoiding plagiarism"
+            },
+            {
+                name: "Wordtune",
+                category: "content",
+                icon: "🎵",
+                color: "linear-gradient(45deg, #f59e0b, #d97706)",
+                description: "AI writing companion that helps rewrite and improve text",
+                tags: ["Rewriting", "Editing", "Clarity", "Professional"],
+                useCase: "Perfect for: Improving writing clarity, professional emails, and content enhancement"
+            },
+
+            // Design & Visual
+            {
+                name: "Midjourney",
+                category: "design",
+                icon: "🎨",
+                color: "linear-gradient(45deg, #667eea, #764ba2)",
+                description: "Create stunning AI-generated artwork and images from text descriptions",
+                tags: ["Art", "Design", "Visual", "Commercial", "Images"],
+                useCase: "Perfect for: Marketing visuals, concept art, social media graphics, and creative projects"
+            },
+            {
+                name: "DALL-E 3",
+                category: "design",
+                icon: "🖼️",
+                color: "linear-gradient(45deg, #10a37f, #059669)",
+                description: "OpenAI's advanced image generation AI with high-quality results",
+                tags: ["Images", "Art", "Generation", "High-Quality"],
+                useCase: "Perfect for: Professional imagery, creative concepts, detailed illustrations, and artistic projects"
+            },
+            {
+                name: "Stable Diffusion",
+                category: "design",
+                icon: "🌊",
+                color: "linear-gradient(45deg, #6366f1, #4f46e5)",
+                description: "Open-source AI image generator with customizable models",
+                tags: ["Open Source", "Images", "Customizable", "Free"],
+                useCase: "Perfect for: Custom image generation, artistic experimentation, and open-source projects"
+            },
+            {
+                name: "Canva",
+                category: "design",
+                icon: "🎯",
+                color: "linear-gradient(45deg, #00c4cc, #7b68ee)",
+                description: "AI-enhanced design platform for non-designers",
+                tags: ["Design", "Templates", "Easy", "Marketing"],
+                useCase: "Perfect for: Social media graphics, presentations, marketing materials, and quick designs"
+            },
+            {
+                name: "Adobe Firefly",
+                category: "design",
+                icon: "🔥",
+                color: "linear-gradient(45deg, #ff0000, #cc0000)",
+                description: "Adobe's AI-powered creative suite for images and graphics",
+                tags: ["Adobe", "Professional", "Creative", "Integration"],
+                useCase: "Perfect for: Professional design work, creative projects, and Adobe workflow integration"
+            },
+            {
+                name: "Figma AI",
+                category: "design",
+                icon: "🎪",
+                color: "linear-gradient(45deg, #9333ea, #7c3aed)",
+                description: "AI-powered design features in Figma for UI/UX design",
+                tags: ["UI/UX", "Design", "Prototyping", "Collaboration"],
+                useCase: "Perfect for: UI design, prototyping, design systems, and team collaboration"
+            },
+            {
+                name: "Runway",
+                category: "design",
+                icon: "🎬",
+                color: "linear-gradient(45deg, #ff6b6b, #ee5a24)",
+                description: "AI-powered video generation and editing tools",
+                tags: ["Video", "Animation", "Creative", "Professional"],
+                useCase: "Perfect for: Video content creation, motion graphics, and AI-generated video clips"
+            },
+            {
+                name: "Luma Dream Machine",
+                category: "design",
+                icon: "💫",
+                color: "linear-gradient(45deg, #8b5cf6, #7c3aed)",
+                description: "AI video generation tool for creating realistic video content",
+                tags: ["Video Generation", "Realistic", "Creative", "Content"],
+                useCase: "Perfect for: AI video creation, content marketing, and visual storytelling"
+            },
+
+            // Coding & Development
+            {
+                name: "GitHub Copilot",
+                category: "coding",
+                icon: "👨‍💻",
+                color: "linear-gradient(45deg, #24292e, #586069)",
+                description: "AI pair programmer that helps you write code faster",
+                tags: ["Coding", "Programming", "Automation", "IDE"],
+                useCase: "Perfect for: Code completion, debugging, learning new languages, and productivity"
+            },
+            {
+                name: "Cursor",
+                category: "coding",
+                icon: "⚡",
+                color: "linear-gradient(45deg, #4f46e5, #7c3aed)",
+                description: "AI-first code editor built for productivity",
+                tags: ["IDE", "Coding", "AI-First", "Productivity"],
+                useCase: "Perfect for: AI-assisted coding, codebase understanding, and rapid development"
+            },
+            {
+                name: "Claude for Coding",
+                category: "coding",
+                icon: "🔧",
+                color: "linear-gradient(45deg, #cc785c, #d4926b)",
+                description: "AI assistant specialized in code analysis and programming help",
+                tags: ["Code Analysis", "Debugging", "Programming", "Help"],
+                useCase: "Perfect for: Code reviews, debugging, algorithm design, and programming tutorials"
+            },
+            {
+                name: "Replit AI",
+                category: "coding",
+                icon: "🌐",
+                color: "linear-gradient(45deg, #0f172a, #1e293b)",
+                description: "AI-powered online IDE with collaborative coding features",
+                tags: ["Online IDE", "Collaboration", "Web Development", "Learning"],
+                useCase: "Perfect for: Web development, prototyping, learning to code, and team projects"
+            },
+            {
+                name: "CodeT5",
+                category: "coding",
+                icon: "🤖",
+                color: "linear-gradient(45deg, #059669, #047857)",
+                description: "AI model for code generation, completion, and understanding",
+                tags: ["Code Generation", "Open Source", "Research", "Models"],
+                useCase: "Perfect for: Code generation research, custom implementations, and academic projects"
+            },
+            {
+                name: "TabNine",
+                category: "coding",
+                icon: "📊",
+                color: "linear-gradient(45deg, #3b82f6, #2563eb)",
+                description: "AI code completion tool for multiple programming languages",
+                tags: ["Code Completion", "Multi-Language", "Productivity", "IDE"],
+                useCase: "Perfect for: Code autocompletion, productivity enhancement, and multi-language development"
+            },
+            {
+                name: "Codeium",
+                category: "coding",
+                icon: "💎",
+                color: "linear-gradient(45deg, #10b981, #059669)",
+                description: "Free AI coding assistant with autocomplete and chat features",
+                tags: ["Free", "Code Assistant", "Autocomplete", "Chat"],
+                useCase: "Perfect for: Free code assistance, learning programming, and productivity enhancement"
+            },
+
+            // Business & Productivity
+            {
+                name: "Perplexity",
+                category: "business",
+                icon: "🔍",
+                color: "linear-gradient(45deg, #1fb6ff, #3b82f6)",
+                description: "AI-powered research assistant with real-time information",
+                tags: ["Research", "Search", "Real-time", "Citations"],
+                useCase: "Perfect for: Market research, fact-checking, current events, and academic research"
+            },
+            {
+                name: "Notion AI",
+                category: "business",
+                icon: "📝",
+                color: "linear-gradient(45deg, #000000, #434343)",
+                description: "AI writing assistant integrated into your workspace",
+                tags: ["Productivity", "Writing", "Organization", "Workspace"],
+                useCase: "Perfect for: Note-taking, project management, content creation, and team collaboration"
+            },
+            {
+                name: "Zapier AI",
+                category: "business",
+                icon: "🔗",
+                color: "linear-gradient(45deg, #ff4500, #e03e00)",
+                description: "AI-powered automation platform connecting apps and workflows",
+                tags: ["Automation", "Workflow", "Integration", "Productivity"],
+                useCase: "Perfect for: Business automation, app integration, workflow optimization, and time-saving"
+            },
+            {
+                name: "Microsoft Copilot",
+                category: "business",
+                icon: "🏢",
+                color: "linear-gradient(45deg, #0078d4, #106ebe)",
+                description: "AI assistant integrated into Microsoft 365 applications",
+                tags: ["Microsoft", "Office", "Productivity", "Enterprise"],
+                useCase: "Perfect for: Office productivity, document creation, data analysis, and business workflows"
+            },
+            {
+                name: "Google Bard",
+                category: "business",
+                icon: "🌟",
+                color: "linear-gradient(45deg, #4285f4, #1a73e8)",
+                description: "Google's conversational AI for research and productivity",
+                tags: ["Google", "Research", "Conversational", "Web Access"],
+                useCase: "Perfect for: Web research, current information, creative tasks, and Google integration"
+            },
+            {
+                name: "Otter.ai",
+                category: "business",
+                icon: "🦦",
+                color: "linear-gradient(45deg, #667eea, #764ba2)",
+                description: "AI meeting transcription and note-taking assistant",
+                tags: ["Transcription", "Meetings", "Notes", "Collaboration"],
+                useCase: "Perfect for: Meeting notes, interview transcription, accessibility, and documentation"
+            },
+            {
+                name: "Calendly AI",
+                category: "business",
+                icon: "📅",
+                color: "linear-gradient(45deg, #006bff, #0052cc)",
+                description: "AI-powered scheduling and calendar management tool",
+                tags: ["Scheduling", "Calendar", "Automation", "Business"],
+                useCase: "Perfect for: Meeting scheduling, calendar optimization, and appointment management"
+            },
+            {
+                name: "Salesforce Einstein",
+                category: "business",
+                icon: "⚡",
+                color: "linear-gradient(45deg, #00a1e0, #0070d2)",
+                description: "AI-powered CRM features for sales and customer management",
+                tags: ["CRM", "Sales", "Analytics", "Enterprise"],
+                useCase: "Perfect for: Sales forecasting, customer insights, lead scoring, and CRM automation"
+            },
+
+            // Specialized Tools
+            {
+                name: "ElevenLabs",
+                category: "content",
+                icon: "🎙️",
+                color: "linear-gradient(45deg, #ff6b35, #f7931e)",
+                description: "AI voice synthesis and cloning for audio content",
+                tags: ["Voice", "Audio", "Synthesis", "Content"],
+                useCase: "Perfect for: Voiceovers, podcasts, audiobooks, and voice content creation"
+            },
+            {
+                name: "Synthesia",
+                category: "design",
+                icon: "🎭",
+                color: "linear-gradient(45deg, #9333ea, #7c3aed)",
+                description: "AI video generator with virtual presenters",
+                tags: ["Video", "Avatars", "Presentation", "Training"],
+                useCase: "Perfect for: Training videos, presentations, marketing content, and educational material"
+            },
+            {
+                name: "Murf",
+                category: "content",
+                icon: "🗣️",
+                color: "linear-gradient(45deg, #06b6d4, #0891b2)",
+                description: "AI voice generator for professional voiceovers",
+                tags: ["Voice", "Professional", "Voiceover", "Audio"],
+                useCase: "Perfect for: Professional voiceovers, e-learning, advertisements, and audio content"
+            },
+            {
+                name: "Framer AI",
+                category: "design",
+                icon: "📱",
+                color: "linear-gradient(45deg, #0066ff, #0052cc)",
+                description: "AI-powered website builder and design tool",
+                tags: ["Website", "Builder", "Design", "No-Code"],
+                useCase: "Perfect for: Website creation, landing pages, prototyping, and web design"
+            },
+            {
+                name: "Webflow AI",
+                category: "design",
+                icon: "🌐",
+                color: "linear-gradient(45deg, #4353ff, #3644ff)",
+                description: "AI features in professional web design and development platform",
+                tags: ["Web Design", "Professional", "CMS", "Development"],
+                useCase: "Perfect for: Professional websites, e-commerce, content management, and web development"
+            },
+            {
+                name: "Gamma",
+                category: "business",
+                icon: "📊",
+                color: "linear-gradient(45deg, #ff6b6b, #ee5a24)",
+                description: "AI-powered presentation and document creation tool",
+                tags: ["Presentations", "Documents", "Design", "Business"],
+                useCase: "Perfect for: Business presentations, pitch decks, reports, and professional documents"
+            },
+            {
+                name: "Beautiful.AI",
+                category: "business",
+                icon: "✨",
+                color: "linear-gradient(45deg, #667eea, #764ba2)",
+                description: "AI presentation software with smart design assistance",
+                tags: ["Presentations", "Design", "Templates", "Smart"],
+                useCase: "Perfect for: Professional presentations, slide design, business pitches, and visual storytelling"
+            },
+            {
+                name: "Tome",
+                category: "business",
+                icon: "📖",
+                color: "linear-gradient(45deg, #8b5cf6, #7c3aed)",
+                description: "AI storytelling and presentation platform",
+                tags: ["Storytelling", "Presentations", "Narrative", "Creative"],
+                useCase: "Perfect for: Storytelling presentations, creative pitches, and narrative-driven content"
+            }
+        ];
+
+        const workflows = [
+            // Content Creation Workflows
+            {
+                name: "Blog Post Creation",
+                category: "content",
+                icon: "📝",
+                color: "linear-gradient(45deg, #667eea, #764ba2)",
+                description: "Complete blog post creation from research to publication",
+                steps: ["Research Topic", "Create Outline", "Write Content", "Edit & Polish", "Design Graphics", "SEO Optimize"],
+                tools: ["Perplexity", "ChatGPT", "Grammarly", "Canva", "Writesonic"],
+                timeEstimate: "2-3 hours",
+                difficulty: "Beginner",
+                tags: ["Writing", "SEO", "Content Marketing"]
+            },
+            {
+                name: "Video Content Pipeline",
+                category: "content",
+                icon: "🎬",
+                color: "linear-gradient(45deg, #ff6b6b, #ee5a24)",
+                description: "From script to published video content",
+                steps: ["Write Script", "Generate Voiceover", "Create Visuals", "Edit Video", "Add Captions", "Publish"],
+                tools: ["ChatGPT", "ElevenLabs", "Midjourney", "Runway", "Otter.ai"],
+                timeEstimate: "4-6 hours",
+                difficulty: "Intermediate",
+                tags: ["Video", "Content", "Social Media"]
+            },
+            {
+                name: "Podcast Production",
+                category: "content",
+                icon: "🎙️",
+                color: "linear-gradient(45deg, #4ecdc4, #44a08d)",
+                description: "Complete podcast episode creation and distribution",
+                steps: ["Plan Episode", "Record", "Transcribe", "Edit Audio", "Create Show Notes", "Distribute"],
+                tools: ["Notion AI", "Otter.ai", "Murf", "ChatGPT", "Canva"],
+                timeEstimate: "3-4 hours",
+                difficulty: "Intermediate",
+                tags: ["Audio", "Podcast", "Content"]
+            },
+
+            // Marketing Workflows
+            {
+                name: "Social Media Campaign",
+                category: "marketing",
+                icon: "📱",
+                color: "linear-gradient(45deg, #a8edea, #fed6e3)",
+                description: "Create and schedule complete social media campaign",
+                steps: ["Research Trends", "Create Copy", "Design Graphics", "Generate Videos", "Schedule Posts", "Track Performance"],
+                tools: ["Perplexity", "Copy.ai", "Canva", "Luma Dream Machine", "Buffer"],
+                timeEstimate: "3-5 hours",
+                difficulty: "Beginner",
+                tags: ["Social Media", "Marketing", "Automation"]
+            },
+            {
+                name: "Product Launch Campaign",
+                category: "marketing",
+                icon: "🚀",
+                color: "linear-gradient(45deg, #667eea, #764ba2)",
+                description: "End-to-end product launch marketing campaign",
+                steps: ["Market Research", "Create Messaging", "Design Assets", "Build Landing Page", "Email Campaign", "PR Outreach"],
+                tools: ["Perplexity", "Jasper", "Midjourney", "Framer AI", "Copy.ai"],
+                timeEstimate: "1-2 weeks",
+                difficulty: "Advanced",
+                tags: ["Product Launch", "Marketing", "Strategy"]
+            },
+            {
+                name: "Email Newsletter",
+                category: "marketing",
+                icon: "📧",
+                color: "linear-gradient(45deg, #10b981, #059669)",
+                description: "Weekly newsletter creation and distribution",
+                steps: ["Research Topics", "Write Content", "Design Layout", "Personalize", "A/B Test", "Send & Analyze"],
+                tools: ["Perplexity", "ChatGPT", "Canva", "Grammarly", "Mailchimp"],
+                timeEstimate: "2-3 hours",
+                difficulty: "Beginner",
+                tags: ["Email", "Newsletter", "Content"]
+            },
+
+            // Business Workflows
+            {
+                name: "Market Research Report",
+                category: "business",
+                icon: "📊",
+                color: "linear-gradient(45deg, #3b82f6, #2563eb)",
+                description: "Comprehensive market analysis and reporting",
+                steps: ["Define Scope", "Gather Data", "Analyze Trends", "Create Visualizations", "Write Report", "Present Findings"],
+                tools: ["Perplexity", "Claude", "Gamma", "Microsoft Copilot", "Beautiful.AI"],
+                timeEstimate: "1-2 days",
+                difficulty: "Intermediate",
+                tags: ["Research", "Analysis", "Business Intelligence"]
+            },
+            {
+                name: "Business Plan Creation",
+                category: "business",
+                icon: "📋",
+                color: "linear-gradient(45deg, #8b5cf6, #7c3aed)",
+                description: "Complete business plan development",
+                steps: ["Market Analysis", "Business Model", "Financial Projections", "Risk Assessment", "Executive Summary", "Design Document"],
+                tools: ["Perplexity", "Claude", "ChatGPT", "Gamma", "Canva"],
+                timeEstimate: "1-2 weeks",
+                difficulty: "Advanced",
+                tags: ["Business Plan", "Strategy", "Finance"]
+            },
+            {
+                name: "Meeting Optimization",
+                category: "business",
+                icon: "🤝",
+                color: "linear-gradient(45deg, #f59e0b, #d97706)",
+                description: "Efficient meeting planning, execution, and follow-up",
+                steps: ["Set Agenda", "Send Invites", "Record Meeting", "Transcribe", "Create Action Items", "Follow Up"],
+                tools: ["Calendly AI", "Otter.ai", "Notion AI", "Microsoft Copilot", "Zapier AI"],
+                timeEstimate: "1-2 hours",
+                difficulty: "Beginner",
+                tags: ["Meetings", "Productivity", "Collaboration"]
+            },
+
+            // Creative Workflows  
+            {
+                name: "Brand Identity Design",
+                category: "creative",
+                icon: "🎨",
+                color: "linear-gradient(45deg, #ec4899, #be185d)",
+                description: "Complete brand identity creation from concept to assets",
+                steps: ["Brand Research", "Concept Development", "Logo Design", "Color Palette", "Typography", "Brand Guidelines"],
+                tools: ["Perplexity", "ChatGPT", "Midjourney", "Canva", "Adobe Firefly"],
+                timeEstimate: "1-2 weeks",
+                difficulty: "Intermediate",
+                tags: ["Branding", "Design", "Identity"]
+            },
+            {
+                name: "Website Creation",
+                category: "creative",
+                icon: "🌐",
+                color: "linear-gradient(45deg, #0066ff, #0052cc)",
+                description: "From concept to live website deployment",
+                steps: ["Plan Structure", "Create Content", "Design Layout", "Generate Images", "Build Site", "Launch & Test"],
+                tools: ["ChatGPT", "Copy.ai", "Midjourney", "Framer AI", "Webflow AI"],
+                timeEstimate: "3-5 days",
+                difficulty: "Intermediate", 
+                tags: ["Website", "Design", "Development"]
+            },
+            {
+                name: "Course Creation",
+                category: "creative",
+                icon: "🎓",
+                color: "linear-gradient(45deg, #059669, #047857)",
+                description: "Complete online course development and launch",
+                steps: ["Curriculum Design", "Content Creation", "Record Videos", "Design Materials", "Build Platform", "Launch Course"],
+                tools: ["Notion AI", "ChatGPT", "Synthesia", "Canva", "Gamma"],
+                timeEstimate: "2-4 weeks",
+                difficulty: "Advanced",
+                tags: ["Education", "Course", "Content Creation"]
+            },
+
+            // Quick Workflows
+            {
+                name: "Quick Logo Design",
+                category: "creative",
+                icon: "⚡",
+                color: "linear-gradient(45deg, #ff6b35, #f7931e)",
+                description: "Fast logo creation for startups and projects",
+                steps: ["Brief Creation", "Generate Concepts", "Refine Design", "Export Files"],
+                tools: ["ChatGPT", "Midjourney", "Canva"],
+                timeEstimate: "30-60 minutes",
+                difficulty: "Beginner",
+                tags: ["Logo", "Quick", "Design"]
+            },
+            {
+                name: "Content Repurposing",
+                category: "marketing",
+                icon: "♻️",
+                color: "linear-gradient(45deg, #10b981, #059669)",
+                description: "Transform one piece of content into multiple formats",
+                steps: ["Analyze Original", "Extract Key Points", "Create Variations", "Design Assets", "Optimize for Platforms"],
+                tools: ["Claude", "Copy.ai", "Canva", "ElevenLabs"],
+                timeEstimate: "1-2 hours",
+                difficulty: "Beginner",
+                tags: ["Repurposing", "Efficiency", "Content"]
+            },
+            {
+                name: "Customer Support Automation",
+                category: "business",
+                icon: "🎧",
+                color: "linear-gradient(45deg, #6366f1, #4f46e5)",
+                description: "Set up AI-powered customer support system",
+                steps: ["Analyze FAQs", "Create Knowledge Base", "Design Chatbot", "Test Responses", "Deploy System", "Monitor Performance"],
+                tools: ["ChatGPT", "Notion AI", "Zapier AI", "Microsoft Copilot"],
+                timeEstimate: "2-3 days",
+                difficulty: "Intermediate",
+                tags: ["Customer Support", "Automation", "Chatbot"]
+            }
+        ];
+
+        let currentWorkflows = workflows;
+        let currentWorkflowFilter = 'all';
+
+        function renderWorkflows(workflowsToRender = currentWorkflows) {
+            const container = document.getElementById('workflowsContainer');
+            container.innerHTML = workflowsToRender.map(workflow => `
+                <div class="tool-card" onclick="showWorkflowDetails('${workflow.name}')">
+                    <div class="tool-header">
+                        <div class="tool-icon" style="background: ${workflow.color};">${workflow.icon}</div>
+                        <div>
+                            <div class="tool-name">${workflow.name}</div>
+                            <div class="tool-category">${workflow.category.toUpperCase()} • ${workflow.timeEstimate} • ${workflow.difficulty}</div>
+                        </div>
+                    </div>
+                    <div class="tool-description">${workflow.description}</div>
+                    <div style="margin: 12px 0; padding: 12px; background: #f8fafc; border-radius: 8px;">
+                        <div style="font-size: 12px; font-weight: 600; color: #64748b; margin-bottom: 6px;">WORKFLOW STEPS:</div>
+                        <div style="font-size: 13px; color: #475569;">${workflow.steps.join(' → ')}</div>
+                    </div>
+                    <div class="tool-tags">
+                        ${workflow.tags.map(tag => `<span class="tool-tag">${tag}</span>`).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterWorkflows(category) {
+            // Update active button
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            currentWorkflowFilter = category;
+            if (category === 'all') {
+                currentWorkflows = workflows;
+            } else {
+                currentWorkflows = workflows.filter(workflow => workflow.category === category);
+            }
+            renderWorkflows(currentWorkflows);
+        }
+
+        function showWorkflowDetails(workflowName) {
+            const workflow = workflows.find(w => w.name === workflowName);
+            const toolsList = workflow.tools.join(', ');
+            const stepsList = workflow.steps.map((step, index) => `${index + 1}. ${step}`).join('\n');
+            
+            alert(`${workflow.name}\n\n${workflow.description}\n\nTime: ${workflow.timeEstimate}\nDifficulty: ${workflow.difficulty}\n\nSteps:\n${stepsList}\n\nRecommended Tools:\n${toolsList}\n\nTags: ${workflow.tags.join(', ')}`);
+        }
+
+        // Workflow search functionality
+        document.getElementById('workflowSearch').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            if (searchTerm === '') {
+                currentWorkflows = currentWorkflowFilter === 'all' ? workflows : workflows.filter(workflow => workflow.category === currentWorkflowFilter);
+            } else {
+                const filteredByCategory = currentWorkflowFilter === 'all' ? workflows : workflows.filter(workflow => workflow.category === currentWorkflowFilter);
+                currentWorkflows = filteredByCategory.filter(workflow => {
+                    const searchIn = [
+                        workflow.name.toLowerCase(),
+                        workflow.description.toLowerCase(),
+                        ...workflow.tags.map(tag => tag.toLowerCase()),
+                        ...workflow.steps.map(step => step.toLowerCase()),
+                        ...workflow.tools.map(tool => tool.toLowerCase())
+                    ].join(' ');
+                    
+                    return searchIn.includes(searchTerm);
+                });
+            }
+            renderWorkflows(currentWorkflows);
+        });
+
+        function renderTools(toolsToRender = currentTools) {
+            const container = document.getElementById('toolsContainer');
+            container.innerHTML = toolsToRender.map(tool => `
+                <div class="tool-card" onclick="showToolDetails('${tool.name}')">
+                    <div class="tool-header">
+                        <div class="tool-icon" style="background: ${tool.color};">${tool.icon}</div>
+                        <div>
+                            <div class="tool-name">${tool.name}</div>
+                            <div class="tool-category">${tool.category.toUpperCase()}</div>
+                        </div>
+                    </div>
+                    <div class="tool-description">${tool.description}</div>
+                    <div class="tool-tags">
+                        ${tool.tags.map(tag => `<span class="tool-tag">${tag}</span>`).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterTools(category) {
+            // Update active button
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            currentFilter = category;
+            if (category === 'all') {
+                currentTools = tools;
+            } else {
+                currentTools = tools.filter(tool => tool.category === category);
+            }
+            renderTools(currentTools);
+        }
+
+        function switchTab(tabName) {
+            // Update active tab
+            document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Show/hide content
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+        }
+
+        function copyPrompt(button) {
+            const promptText = button.previousElementSibling.textContent;
+            navigator.clipboard.writeText(promptText).then(() => {
+                button.textContent = 'Copied!';
+                setTimeout(() => {
+                    button.textContent = 'Copy Template';
+                }, 2000);
+            });
+        }
+
+        function openQuickStart() {
+            document.getElementById('quickStartModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('quickStartModal').classList.remove('active');
+        }
+
+        function quickAction(action) {
+            closeModal();
+            
+            const actionMap = {
+                'write': { tab: 'prompts', filter: 'content' },
+                'design': { tab: 'discover', filter: 'design' },
+                'analyze': { tab: 'discover', filter: 'business' },
+                'code': { tab: 'discover', filter: 'coding' },
+                'research': { tab: 'discover', filter: 'business' }
+            };
+            
+            const targetAction = actionMap[action];
+            
+            // Switch to appropriate tab
+            document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            if (targetAction.tab === 'prompts') {
+                document.querySelector('[onclick="switchTab(\'prompts\')"]').classList.add('active');
+                document.getElementById('prompts').classList.add('active');
+            } else {
+                document.querySelector('[onclick="switchTab(\'discover\')"]').classList.add('active');
+                document.getElementById('discover').classList.add('active');
+                
+                // Apply filter
+                if (targetAction.filter !== 'all') {
+                    setTimeout(() => {
+                        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+                        document.querySelector(`[onclick="filterTools('${targetAction.filter}')"]`).classList.add('active');
+                        filterTools(targetAction.filter);
+                    }, 100);
+                }
+            }
+        }
+
+        function showToolDetails(toolName) {
+            const tool = tools.find(t => t.name === toolName);
+            alert(`${tool.name}\n\n${tool.description}\n\n${tool.useCase}\n\nTags: ${tool.tags.join(', ')}`);
+        }
+
+        // Enhanced search functionality
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            if (searchTerm === '') {
+                currentTools = currentFilter === 'all' ? tools : tools.filter(tool => tool.category === currentFilter);
+            } else {
+                const filteredByCategory = currentFilter === 'all' ? tools : tools.filter(tool => tool.category === currentFilter);
+                
+                // Enhanced search that includes use cases and broader matching
+                currentTools = filteredByCategory.filter(tool => {
+                    const searchIn = [
+                        tool.name.toLowerCase(),
+                        tool.description.toLowerCase(),
+                        tool.useCase.toLowerCase(),
+                        ...tool.tags.map(tag => tag.toLowerCase())
+                    ].join(' ');
+                    
+                    // Support multiple search terms
+                    const searchTerms = searchTerm.split(' ').filter(term => term.length > 0);
+                    return searchTerms.every(term => searchIn.includes(term));
+                });
+
+                // If no results, try partial matching for common terms
+                if (currentTools.length === 0) {
+                    const commonTerms = {
+                        'website': ['web', 'site', 'builder', 'design'],
+                        'video': ['video', 'animation', 'motion'],
+                        'writing': ['writing', 'content', 'text', 'copy'],
+                        'image': ['image', 'visual', 'art', 'design', 'photo'],
+                        'voice': ['voice', 'audio', 'speech', 'sound'],
+                        'presentation': ['presentation', 'slide', 'pitch'],
+                        'research': ['research', 'search', 'information', 'data'],
+                        'automation': ['automation', 'workflow', 'integrate'],
+                        'meeting': ['meeting', 'transcription', 'notes'],
+                        'schedule': ['schedule', 'calendar', 'appointment']
+                    };
+
+                    for (const [key, synonyms] of Object.entries(commonTerms)) {
+                        if (searchTerm.includes(key)) {
+                            currentTools = filteredByCategory.filter(tool => {
+                                const searchIn = [
+                                    tool.name.toLowerCase(),
+                                    tool.description.toLowerCase(),
+                                    tool.useCase.toLowerCase(),
+                                    ...tool.tags.map(tag => tag.toLowerCase())
+                                ].join(' ');
+                                
+                                return synonyms.some(synonym => searchIn.includes(synonym));
+                            });
+                            break;
+                        }
+                    }
+                }
+            }
+            renderTools(currentTools);
+        });
+
+        // Initialize the app
+        renderTools();
+        renderWorkflows();
+        renderComparisons();
+
+        // Close modal when clicking outside
+        document.getElementById('quickStartModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>
