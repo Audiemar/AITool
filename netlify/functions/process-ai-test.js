@@ -10,7 +10,7 @@ const AI_CONFIG = {
       'Content-Type': 'application/json'
     }),
     body: (prompt) => ({
-      model: 'gpt-4',
+      model: 'gpt-4o',  // Updated to latest model
       messages: [{ role: 'user', content: prompt }],
       max_tokens: 1000,
       temperature: 0.7
