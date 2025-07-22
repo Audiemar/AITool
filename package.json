@@ -1,26 +1,12 @@
 {
-  "name": "test-ai-tools",
+  "name": "test-ai-tools-backend",
   "version": "1.0.0",
-  "description": "Live AI testing and comparison tool",
-  "main": "index.html",
-  "scripts": {
-    "build": "echo 'No build needed for static site'",
-    "dev": "netlify dev"
-  },
+  "description": "Automated AI testing platform backend",
+  "type": "module",
   "dependencies": {
-    "node-fetch": "^2.6.7"
+    "node-fetch": "^3.3.2"
   },
-  "devDependencies": {
-    "netlify-cli": "^17.0.0"
-  },
-  "keywords": [
-    "ai",
-    "testing",
-    "comparison",
-    "chatgpt",
-    "claude",
-    "gemini"
-  ],
-  "author": "Test AI Tools",
-  "license": "MIT"
+  "engines": {
+    "node": ">=18.0.0"
+  }
 }
