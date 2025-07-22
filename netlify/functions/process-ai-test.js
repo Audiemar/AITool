@@ -29,15 +29,16 @@ const AI_CONFIG = {
       messages: [{ role: 'user', content: prompt }]
     })
   },
-  google: {
-    url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent',
-    headers: (apiKey) => ({
-      'Content-Type': 'application/json'
-    }),
-    body: (prompt) => ({
-      contents: [{ parts: [{ text: prompt }] }]
-    })
-  }
+ google: {
+  url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+  headers: (apiKey) => ({
+    'Content-Type': 'application/json',
+    'x-goog-api-key': apiKey  // Note: lowercase 'x'
+  }),
+  body: (prompt) => ({
+    contents: [{ parts: [{ text: prompt }] }]
+  })
+}
 };
 
 // Call individual AI APIs
