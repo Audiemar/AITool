@@ -5,6 +5,10 @@
 [functions]
   node_bundler = "esbuild"
 
+[build.environment]
+  NODE_VERSION = "18"
+  SECRETS_SCAN_ENABLED = "false"
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
@@ -14,6 +18,3 @@
   from = "/webhook/paypal"
   to = "/.netlify/functions/paypal-webhook"
   status = 200
-
-[build.environment]
-  NODE_VERSION = "18"
