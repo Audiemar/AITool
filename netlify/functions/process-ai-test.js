@@ -195,26 +195,37 @@ async function sendResultsEmail(email, orderData, results) {
   try {
     const report = generateComparisonReport(results, orderData.prompt);
     
-    // Fixed EmailJS data structure
+    // Fixed EmailJS data structure to match your template exactly
     const emailData = {
-      service_id: 'service_6deh10r',  // Your service ID from the screenshot
-      template_id: 'template_test_results',  // Your template ID from the screenshot
-      user_id: process.env.EMAILJS_PUBLIC_KEY,
+      service_id: 'service_6deh10r',  // Your service ID
+      template_id: 'template_test_results',  // Your template ID  
+      user_id: 'WvSbSdi4EaiQMExvs',  // Your public key
       template_params: {
-        // These match your template variables
-        email: email,  // {{email}} in your template
+        // Match your template variables exactly
+        email: email,  // This should populate {{email}} in your template
+        to_email: email,  // Backup - in case template uses {{to_email}}
         order_number: orderData.orderNumber,  // {{order_number}}
         prompt: orderData.prompt,  // {{prompt}}
         ais: Object.keys(results).join(', '),  // {{ais}}
         cost: orderData.amount || orderData.cost,  // {{cost}}
         payment_id: orderData.paymentId,  // {{payment_id}}
-        report: report,  // Full report for the email body
+        report: report,  // Full markdown report for email body
         winner: Object.keys(results).sort((a, b) => results[b].analysis.score - results[a].analysis.score)[0],
-        winner_score: Math.max(...Object.values(results).map(r => r.analysis.score))
+        winner_score: Math.max(...Object.values(results).map(r => r.analysis.score)),
+        // Additional template variables that might be needed
+        from_email: 'support@testaitools.online',
+        reply_to: 'support@testaitools.online',
+        subject: `AI Test Results - Order ${orderData.orderNumber}`
       }
     };
 
-    console.log('Sending email with data:', emailData);
+    console.log('Sending email with data:', {
+      service_id: emailData.service_id,
+      template_id: emailData.template_id, 
+      user_id: emailData.user_id,
+      recipient: email,
+      template_params_keys: Object.keys(emailData.template_params)
+    });
 
     // Use EmailJS API
     const emailResponse = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
