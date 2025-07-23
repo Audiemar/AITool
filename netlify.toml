@@ -9,13 +9,7 @@
   NODE_VERSION = "20"
   SECRETS_SCAN_ENABLED = "false"
 
-# Force function routes for custom domain
-[[redirects]]
-  from = "/.netlify/functions/*"
-  to = "/.netlify/functions/:splat"
-  status = 200
-  force = false
-
+# Custom domain function redirects (no /.netlify paths allowed)
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
@@ -24,4 +18,10 @@
 [[redirects]]
   from = "/webhook/paypal"
   to = "/.netlify/functions/paypal-webhook"
+  status = 200
+
+# Catch-all for root
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
   status = 200
