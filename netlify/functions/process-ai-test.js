@@ -122,7 +122,7 @@ async function sendResultsEmail(email, orderData, results) {
     const emailData = {
       service_id: 'service_6deh10r',
       template_id: 'template_test_results',
-      user_id: 'WvSbSdi4EaiQMExvs',
+      user_id: 'WwSbSdi4EaiQMExvs',
       template_params: {
         order_number: orderData.orderNumber,
         prompt: orderData.prompt,
