@@ -120,10 +120,12 @@ async function sendResultsEmail(email, orderData, results) {
   }
   try {
     const emailData = {
-      service_id: process.env.EMAILJS_SERVICE_ID || 'service_6deh10r', // Use env var, fallback to hardcoded
-      template_id: process.env.EMAILJS_TEMPLATE_ID || 'template_test_results', // Use env var, fallback to hardcoded
-      user_id: process.env.EMAILJS_PUBLIC_KEY || 'WwSbSdi4EaiQMExvs', // Use env var for Public Key, fallback to hardcoded
-      private_key: process.env.EMAILJS_PRIVATE_KEY, // Your EmailJS Private Key from Netlify env vars
+      service_id: process.env.EMAILJS_SERVICE_ID || 'service_6deh10r',
+      template_id: process.env.EMAILJS_TEMPLATE_ID || 'template_test_results',
+      // CORRECTED: user_id is your Public Key
+      user_id: process.env.EMAILJS_PUBLIC_KEY || 'WwSbSdi4EaiQMExvs', 
+      // NEW: Private Key goes into the 'accessToken' field as per docs
+      accessToken: process.env.EMAILJS_PRIVATE_KEY, 
       template_params: {
         order_number: orderData.orderNumber,
         prompt: orderData.prompt,
@@ -133,6 +135,20 @@ async function sendResultsEmail(email, orderData, results) {
       }
     };
 
+    console.log('📧 Sending email with payload:', emailData);
+    const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(emailData)
+    });
+    const text = await response.text();
+    console.log('📬 EmailJS response:', response.status, text);
+    return response.ok;
+  } catch (err) {
+    console.error('🔥 sendResultsEmail() error:', err);
+    return false;
+  }
+};
     console.log('📧 Sending email with payload:', emailData);
     const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
       method: 'POST',
