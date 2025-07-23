@@ -122,10 +122,10 @@ async function sendResultsEmail(email, orderData, results) {
     const emailData = {
       service_id: process.env.EMAILJS_SERVICE_ID || 'service_6deh10r',
       template_id: process.env.EMAILJS_TEMPLATE_ID || 'template_test_results',
-      // CORRECTED: user_id is your Public Key
-      user_id: process.env.EMAILJS_PUBLIC_KEY || 'WwSbSdi4EaiQMExvs', 
-      // NEW: Private Key goes into the 'accessToken' field as per docs
-      accessToken: process.env.EMAILJS_PRIVATE_KEY, 
+      // user_id is your Public Key
+      user_id: process.env.EMAILJS_PUBLIC_KEY || 'WwSbSdi4EaiQMExvs',
+      // Private Key goes into the 'accessToken' field as per docs
+      accessToken: process.env.EMAILJS_PRIVATE_KEY,
       template_params: {
         order_number: orderData.orderNumber,
         prompt: orderData.prompt,
@@ -135,20 +135,6 @@ async function sendResultsEmail(email, orderData, results) {
       }
     };
 
-    console.log('📧 Sending email with payload:', emailData);
-    const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(emailData)
-    });
-    const text = await response.text();
-    console.log('📬 EmailJS response:', response.status, text);
-    return response.ok;
-  } catch (err) {
-    console.error('🔥 sendResultsEmail() error:', err);
-    return false;
-  }
-};
     console.log('📧 Sending email with payload:', emailData);
     const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
       method: 'POST',
@@ -196,6 +182,7 @@ exports.handler = async (event) => {
         continue;
       }
       console.log(`⚙️ Calling ${ai}...`);
+      // REMEMBER TO UNCOMMENT THIS BLOCK AND REMOVE MOCKING AFTER EMAIL IS FIXED
       const res = await callAI(provider, orderData.prompt, key);
       results[ai] = {
         response: res,
@@ -203,6 +190,27 @@ exports.handler = async (event) => {
         timestamp: new Date().toISOString()
       };
     }
+
+    // IMPORTANT: If you want to keep costs down, re-introduce the AI mocking here
+    /*
+    const results = {}; // Initialize empty results
+    for (const ai of selectedAIs) {
+        let mockResponse = "";
+        if (ai === 'Claude') {
+            mockResponse = "This is a mock response from Claude for debugging purposes. It's a placeholder to test the email functionality without hitting the actual AI API.";
+        } else if (ai === 'Gemini') {
+            mockResponse = "Mock response from Gemini. For testing email integration, we are using simulated AI output.";
+        } else {
+            mockResponse = `Mock response for unknown AI: ${ai}.`;
+        }
+        results[ai] = {
+            response: mockResponse,
+            analysis: analyzeResponse(mockResponse, ai.toLowerCase()),
+            timestamp: new Date().toISOString()
+        };
+    }
+    */
+
 
     const emailSent = await sendResultsEmail(orderData.email, orderData, results);
     console.log(`✅ Order ${orderData.orderNumber} complete. Email sent: ${emailSent}`);
