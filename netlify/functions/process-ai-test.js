@@ -124,15 +124,14 @@ async function sendResultsEmail(email, orderData, results) {
       template_id: process.env.EMAILJS_TEMPLATE_ID || 'template_test_results',
       user_id: process.env.EMAILJS_PUBLIC_KEY || 'WwSbSdi4EaiQMExvs',
       accessToken: process.env.EMAILJS_PRIVATE_KEY,
-      template_params: {
-        // IMPORTANT: Verify 'recipient_email' matches the variable name in your EmailJS template's 'To Email' field
-        recipient_email: email, 
+       template_params: {
+        email: email, // <--- Make sure this key matches your EmailJS template!
         order_number: orderData.orderNumber,
         prompt: orderData.prompt,
         ais: Object.keys(results).join(', '),
         cost: orderData.amount || orderData.cost,
         payment_id: orderData.paymentId
-      }
+     }
     };
 
     console.log('📧 Sending email with payload:', emailData);
