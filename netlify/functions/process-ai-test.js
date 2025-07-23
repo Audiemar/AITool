@@ -196,28 +196,18 @@ async function sendResultsEmail(email, orderData, results) {
     const report = generateComparisonReport(results, orderData.prompt);
     
     // Fixed EmailJS data structure to match your template exactly
-    const emailData = {
-      service_id: 'service_6deh10r',  // Your service ID
-      template_id: 'template_test_results',  // Your template ID  
-      user_id: 'WvSbSdi4EaiQMExvs',  // Your public key
-      template_params: {
-        // Match your template variables exactly
-        email: email,  // This should populate {{email}} in your template
-        to_email: email,  // Backup - in case template uses {{to_email}}
-        order_number: orderData.orderNumber,  // {{order_number}}
-        prompt: orderData.prompt,  // {{prompt}}
-        ais: Object.keys(results).join(', '),  // {{ais}}
-        cost: orderData.amount || orderData.cost,  // {{cost}}
-        payment_id: orderData.paymentId,  // {{payment_id}}
-        report: report,  // Full markdown report for email body
-        winner: Object.keys(results).sort((a, b) => results[b].analysis.score - results[a].analysis.score)[0],
-        winner_score: Math.max(...Object.values(results).map(r => r.analysis.score)),
-        // Additional template variables that might be needed
-        from_email: 'support@testaitools.online',
-        reply_to: 'support@testaitools.online',
-        subject: `AI Test Results - Order ${orderData.orderNumber}`
-      }
-    };
+const emailData = {
+  service_id: 'service_6deh10r',
+  template_id: 'template_test_results',
+  user_id: 'WvSbSdi4EaiQMExvs',
+  template_params: {
+    order_number: orderData.orderNumber,
+    prompt: orderData.prompt,
+    ais: Object.keys(results).join(', '),
+    cost: orderData.amount || orderData.cost,
+    payment_id: orderData.paymentId
+  }
+};
 
     console.log('Sending email with data:', {
       service_id: emailData.service_id,
