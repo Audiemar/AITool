@@ -1,21 +1,21 @@
-// netlify/functions/process-ai-test.js
-import fetch from 'node-fetch';
+// netlify/functions/process-ai-test-fixed.js
+// Fixed version with OpenAI disabled and correct EmailJS setup
 
-// AI API Configurations
+// AI API Configurations (OpenAI disabled temporarily)
 const AI_CONFIG = {
-  openai: {
-    url: 'https://api.openai.com/v1/chat/completions',
-    headers: (apiKey) => ({
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json'
-    }),
-    body: (prompt) => ({
-      model: 'gpt-4o',  // Updated to latest model
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 1000,
-      temperature: 0.7
-    })
-  },
+  // openai: {
+  //   url: 'https://api.openai.com/v1/chat/completions',
+  //   headers: (apiKey) => ({
+  //     'Authorization': `Bearer ${apiKey}`,
+  //     'Content-Type': 'application/json'
+  //   }),
+  //   body: (prompt) => ({
+  //     model: 'gpt-4',
+  //     messages: [{ role: 'user', content: prompt }],
+  //     max_tokens: 1000,
+  //     temperature: 0.7
+  //   })
+  // },
   anthropic: {
     url: 'https://api.anthropic.com/v1/messages',
     headers: (apiKey) => ({
@@ -24,21 +24,20 @@ const AI_CONFIG = {
       'anthropic-version': '2023-06-01'
     }),
     body: (prompt) => ({
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-3-sonnet-20240229',
       max_tokens: 1000,
       messages: [{ role: 'user', content: prompt }]
     })
   },
- google: {
-  url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
-  headers: (apiKey) => ({
-    'Content-Type': 'application/json',
-    'x-goog-api-key': apiKey  // Note: lowercase 'x'
-  }),
-  body: (prompt) => ({
-    contents: [{ parts: [{ text: prompt }] }]
-  })
-}
+  google: {
+    url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent',
+    headers: (apiKey) => ({
+      'Content-Type': 'application/json'
+    }),
+    body: (prompt) => ({
+      contents: [{ parts: [{ text: prompt }] }]
+    })
+  }
 };
 
 // Call individual AI APIs
@@ -180,42 +179,49 @@ function generateComparisonReport(results, prompt) {
   return report;
 }
 
-// Send results email
+// Send results email with correct EmailJS configuration
 async function sendResultsEmail(email, orderData, results) {
   try {
     const report = generateComparisonReport(results, orderData.prompt);
     
+    // Fixed EmailJS data structure
     const emailData = {
-      to_email: email,
-      order_number: orderData.orderNumber,
-      prompt: orderData.prompt,
-      report: report,
-      cost: orderData.amount || orderData.cost,
-      payment_id: orderData.paymentId,
-      ais_tested: Object.keys(results).join(', '),
-      winner: Object.keys(results).sort((a, b) => results[b].analysis.score - results[a].analysis.score)[0],
-      winner_score: Math.max(...Object.values(results).map(r => r.analysis.score))
+      service_id: 'service_6deh10r',  // Your service ID from the screenshot
+      template_id: 'template_test_results',  // Your template ID from the screenshot
+      user_id: process.env.EMAILJS_PUBLIC_KEY,
+      template_params: {
+        // These match your template variables
+        email: email,  // {{email}} in your template
+        order_number: orderData.orderNumber,  // {{order_number}}
+        prompt: orderData.prompt,  // {{prompt}}
+        ais: Object.keys(results).join(', '),  // {{ais}}
+        cost: orderData.amount || orderData.cost,  // {{cost}}
+        payment_id: orderData.paymentId,  // {{payment_id}}
+        report: report,  // Full report for the email body
+        winner: Object.keys(results).sort((a, b) => results[b].analysis.score - results[a].analysis.score)[0],
+        winner_score: Math.max(...Object.values(results).map(r => r.analysis.score))
+      }
     };
 
-    // Use EmailJS to send results
+    console.log('Sending email with data:', emailData);
+
+    // Use EmailJS API
     const emailResponse = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        service_id: process.env.EMAILJS_SERVICE_ID,
-        template_id: process.env.EMAILJS_TEMPLATE_ID,
-        user_id: process.env.EMAILJS_PUBLIC_KEY,
-        template_params: emailData
-      })
+      body: JSON.stringify(emailData)
     });
+
+    const responseText = await emailResponse.text();
+    console.log('EmailJS response:', emailResponse.status, responseText);
 
     if (emailResponse.ok) {
       console.log('Results email sent successfully to:', email);
       return true;
     } else {
-      console.error('Failed to send results email:', emailResponse.status);
+      console.error('Failed to send results email:', emailResponse.status, responseText);
       return false;
     }
   } catch (error) {
@@ -225,47 +231,74 @@ async function sendResultsEmail(email, orderData, results) {
 }
 
 // Main function
-export default async (request, context) => {
+exports.handler = async (event, context) => {
   // Handle CORS
-  if (request.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 200,
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'POST',
         'Access-Control-Allow-Headers': 'Content-Type'
-      }
-    });
+      },
+      body: ''
+    };
   }
 
-  if (request.method !== 'POST') {
-    return new Response('Method not allowed', { status: 405 });
+  if (event.httpMethod !== 'POST') {
+    return {
+      statusCode: 405,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ error: 'Method not allowed' })
+    };
   }
 
   try {
-    const orderData = await request.json();
+    const orderData = JSON.parse(event.body);
     
     console.log(`Processing AI test order ${orderData.orderNumber} for ${orderData.email}`);
     console.log(`Prompt: "${orderData.prompt}"`);
-    console.log(`Selected AIs: ${orderData.selectedAIs?.join(', ') || 'ChatGPT, Claude, Gemini'}`);
+    console.log(`Selected AIs: ${orderData.selectedAIs?.join(', ') || 'Claude, Gemini'}`);
 
     const results = {};
-    const selectedAIs = orderData.selectedAIs || ['ChatGPT', 'Claude', 'Gemini'];
+    const selectedAIs = orderData.selectedAIs || ['Claude', 'Gemini']; // Removed ChatGPT
     
     const apiKeys = {
-      ChatGPT: process.env.OPENAI_API_KEY,
+      // ChatGPT: process.env.OPENAI_API_KEY,  // Disabled
       Claude: process.env.ANTHROPIC_API_KEY,
       Gemini: process.env.GOOGLE_API_KEY
     };
 
     const providers = {
-      ChatGPT: 'openai',
+      // ChatGPT: 'openai',  // Disabled
       Claude: 'anthropic',
       Gemini: 'google'
     };
 
-    // Process each selected AI
+    // Check environment variables
+    console.log('Environment check:', {
+      // OpenAI: !!apiKeys.ChatGPT,  // Disabled
+      Anthropic: !!apiKeys.Claude,
+      Google: !!apiKeys.Gemini,
+      EmailJS_Service: !!process.env.EMAILJS_SERVICE_ID,
+      EmailJS_Key: !!process.env.EMAILJS_PUBLIC_KEY
+    });
+
+    // Process each selected AI (skip ChatGPT for now)
     for (const ai of selectedAIs) {
+      if (ai === 'ChatGPT') {
+        console.log('⚠️ Skipping ChatGPT - temporarily disabled');
+        results[ai] = {
+          response: 'ChatGPT temporarily unavailable - API key configuration in progress',
+          analysis: { score: 0, error: 'Temporarily disabled', pros: [], cons: ['Service temporarily unavailable'] },
+          timestamp: new Date().toISOString()
+        };
+        continue;
+      }
+
       const provider = providers[ai];
       const apiKey = apiKeys[ai];
 
@@ -297,32 +330,36 @@ export default async (request, context) => {
     
     console.log(`Order ${orderData.orderNumber} completed successfully. Email sent: ${emailSent}`);
 
-    return new Response(JSON.stringify({
-      success: true,
-      orderNumber: orderData.orderNumber,
-      results,
-      emailSent,
-      message: 'AI testing completed successfully'
-    }), {
-      status: 200,
+    return {
+      statusCode: 200,
       headers: {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*'
-      }
-    });
+      },
+      body: JSON.stringify({
+        success: true,
+        orderNumber: orderData.orderNumber,
+        results,
+        emailSent,
+        message: 'AI testing completed successfully',
+        note: 'ChatGPT temporarily disabled - only Claude and Gemini tested'
+      })
+    };
 
   } catch (error) {
     console.error('Error processing AI test:', error);
     
-    return new Response(JSON.stringify({
-      success: false,
-      error: error.message
-    }), {
-      status: 500,
+    return {
+      statusCode: 500,
       headers: {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*'
-      }
-    });
+      },
+      body: JSON.stringify({
+        success: false,
+        error: error.message,
+        stack: error.stack
+      })
+    };
   }
 };
