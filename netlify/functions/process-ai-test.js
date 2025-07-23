@@ -113,42 +113,26 @@ function generateComparisonReport(results, prompt) {
 }
 
 async function sendResultsEmail(email, orderData, results) {
-    console.log('📨 Preparing to send results email...');
-    if (!email || typeof email !== 'string' || !email.includes('@')) {
-        console.error('❌ Invalid or missing email address:', email);
-        return false;
-    }
-    try {
-        const emailData = {
-            service_id: 'service_6deh10r', // Consider using env var here too
-            template_id: 'template_test_results', // Consider using env var here too
-            user_id: 'WwSbSdi4EaiQMExvs',       // This is your Public Key from EmailJS
-            // --- ADD THIS LINE ---
-            private_key: process.env.EMAILJS_PRIVATE_KEY, // Your EmailJS Private Key from Netlify env vars
-            // ---------------------
-            template_params: {
-                order_number: orderData.orderNumber,
-                prompt: orderData.prompt,
-                ais: Object.keys(results).join(', '),
-                cost: orderData.amount || orderData.cost,
-                payment_id: orderData.paymentId
-            }
-        };
+  console.log('📨 Preparing to send results email...');
+  if (!email || typeof email !== 'string' || !email.includes('@')) {
+    console.error('❌ Invalid or missing email address:', email);
+    return false;
+  }
+  try {
+    const emailData = {
+      service_id: process.env.EMAILJS_SERVICE_ID || 'service_6deh10r', // Use env var, fallback to hardcoded
+      template_id: process.env.EMAILJS_TEMPLATE_ID || 'template_test_results', // Use env var, fallback to hardcoded
+      user_id: process.env.EMAILJS_PUBLIC_KEY || 'WwSbSdi4EaiQMExvs', // Use env var for Public Key, fallback to hardcoded
+      private_key: process.env.EMAILJS_PRIVATE_KEY, // Your EmailJS Private Key from Netlify env vars
+      template_params: {
+        order_number: orderData.orderNumber,
+        prompt: orderData.prompt,
+        ais: Object.keys(results).join(', '),
+        cost: orderData.amount || orderData.cost,
+        payment_id: orderData.paymentId
+      }
+    };
 
-        console.log('📧 Sending email with payload:', emailData);
-        const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(emailData)
-        });
-        const text = await response.text();
-        console.log('📬 EmailJS response:', response.status, text);
-        return response.ok;
-    } catch (err) {
-        console.error('🔥 sendResultsEmail() error:', err);
-        return false;
-    }
-};
     console.log('📧 Sending email with payload:', emailData);
     const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
       method: 'POST',
