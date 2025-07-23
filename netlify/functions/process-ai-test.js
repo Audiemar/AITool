@@ -3,19 +3,6 @@
 
 // AI API Configurations (OpenAI disabled temporarily)
 const AI_CONFIG = {
-  // openai: {
-  //   url: 'https://api.openai.com/v1/chat/completions',
-  //   headers: (apiKey) => ({
-  //     'Authorization': `Bearer ${apiKey}`,
-  //     'Content-Type': 'application/json'
-  //   }),
-  //   body: (prompt) => ({
-  //     model: 'gpt-4',
-  //     messages: [{ role: 'user', content: prompt }],
-  //     max_tokens: 1000,
-  //     temperature: 0.7
-  //   })
-  // },
   anthropic: {
     url: 'https://api.anthropic.com/v1/messages',
     headers: (apiKey) => ({
@@ -24,49 +11,73 @@ const AI_CONFIG = {
       'anthropic-version': '2023-06-01'
     }),
     body: (prompt) => ({
-      model: 'claude-3-sonnet-20240229',
+      model: 'claude-3-5-sonnet-20241022',  // Updated model
       max_tokens: 1000,
       messages: [{ role: 'user', content: prompt }]
     })
   },
   google: {
-    url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent',
+    url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',  // Updated endpoint
     headers: (apiKey) => ({
       'Content-Type': 'application/json'
     }),
     body: (prompt) => ({
-      contents: [{ parts: [{ text: prompt }] }]
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        maxOutputTokens: 1000,
+        temperature: 0.7
+      }
     })
   }
 };
 
-// Call individual AI APIs
+// Call individual AI APIs with enhanced debugging
 async function callAI(provider, prompt, apiKey) {
   const config = AI_CONFIG[provider];
   const url = provider === 'google' ? `${config.url}?key=${apiKey}` : config.url;
   
   try {
     console.log(`Calling ${provider} API...`);
+    console.log(`URL: ${url}`);
+    console.log(`API Key length: ${apiKey ? apiKey.length : 'missing'}`);
+    console.log(`API Key starts with: ${apiKey ? apiKey.substring(0, 10) + '...' : 'N/A'}`);
+    
+    const requestBody = JSON.stringify(config.body(prompt));
+    console.log(`Request body: ${requestBody.substring(0, 200)}...`);
     
     const response = await fetch(url, {
       method: 'POST',
       headers: config.headers(apiKey),
-      body: JSON.stringify(config.body(prompt))
+      body: requestBody
     });
 
+    console.log(`${provider} response status: ${response.status}`);
+    console.log(`${provider} response headers:`, Object.fromEntries(response.headers.entries()));
+
     if (!response.ok) {
-      throw new Error(`${provider} API error: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      console.log(`${provider} error response:`, errorText);
+      throw new Error(`${provider} API error: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
     const data = await response.json();
+    console.log(`${provider} success response received, length:`, JSON.stringify(data).length);
     
     // Extract response text based on provider
     switch (provider) {
       case 'openai':
         return data.choices[0].message.content;
       case 'anthropic':
+        if (!data.content || !data.content[0] || !data.content[0].text) {
+          console.log('Unexpected Anthropic response structure:', data);
+          throw new Error('Unexpected response structure from Anthropic');
+        }
         return data.content[0].text;
       case 'google':
+        if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts || !data.candidates[0].content.parts[0]) {
+          console.log('Unexpected Google response structure:', data);
+          throw new Error('Unexpected response structure from Google');
+        }
         return data.candidates[0].content.parts[0].text;
       default:
         throw new Error(`Unknown provider: ${provider}`);
