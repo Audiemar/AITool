@@ -1,4 +1,4 @@
-// netlify/functions/process-ai-test-fixed.js
+// netlify/functions/process-ai-test.js
 
 // AI API Configurations (OpenAI disabled temporarily)
 const AI_CONFIG = {
@@ -101,10 +101,10 @@ function analyzeResponse(response, provider) {
 function generateComparisonReport(results, prompt) {
   const aiNames = Object.keys(results);
   const sorted = aiNames.sort((a, b) => results[b].analysis.score - results[a].analysis.score);
-  let report = `# AI Comparison Report\n\n**Prompt:** \"${prompt}\"\n**Date:** ${new Date().toLocaleDateString()}\n**AIs Tested:** ${aiNames.join(', ')}\n\n## Summary\n\n**Winner:** ${sorted[0]} (${results[sorted[0]].analysis.score}/10)\n\n## Detailed Results\n\n`;
+  let report = `# AI Comparison Report\n\n**Prompt:** "${prompt}"\n**Date:** ${new Date().toLocaleDateString()}\n**AIs Tested:** ${aiNames.join(', ')}\n\n## Summary\n\n**Winner:** ${sorted[0]} (${results[sorted[0]].analysis.score}/10)\n\n## Detailed Results\n\n`;
   sorted.forEach((ai, i) => {
     const a = results[ai].analysis;
-    report += `### ${i + 1}. ${ai} - ${a.score}/10\n\n**Response:**\n${results[ai].response}\n\n**Analysis:**\n- Word Count: ${a.wordCount}\n- Sentences: ${a.sentences}\n- Paragraphs: ${a.paragraphs}\n\n**Strengths:** ${a.pros.join(', ')}\n`;
+    report += `### ${i + 1}. ${ai} - ${a.score}/10\n\n**Response:**\n\`\`\`\n${results[ai].response}\n\`\`\`\n\n**Analysis:**\n- Word Count: ${a.wordCount}\n- Sentences: ${a.sentences}\n- Paragraphs: ${a.paragraphs}\n\n**Strengths:** ${a.pros.join(', ')}\n`;
     if (a.cons.length) report += `**Areas for Improvement:** ${a.cons.join(', ')}\n`;
     report += `\n---\n\n`;
   });
@@ -112,7 +112,7 @@ function generateComparisonReport(results, prompt) {
   return report;
 }
 
-async function sendResultsEmail(email, orderData, results) {
+async function sendResultsEmail(email, orderData, results, comparisonReport) {
   console.log('📨 Preparing to send results email...');
   if (!email || typeof email !== 'string' || !email.includes('@')) {
     console.error('❌ Invalid or missing email address:', email);
@@ -124,14 +124,15 @@ async function sendResultsEmail(email, orderData, results) {
       template_id: process.env.EMAILJS_TEMPLATE_ID || 'template_test_results',
       user_id: process.env.EMAILJS_PUBLIC_KEY || 'WwSbSdi4EaiQMExvs',
       accessToken: process.env.EMAILJS_PRIVATE_KEY,
-       template_params: {
-        email: email, // <--- Make sure this key matches your EmailJS template!
+      template_params: {
+        email: email, // <--- This key MUST match what your EmailJS template expects for the recipient
         order_number: orderData.orderNumber,
         prompt: orderData.prompt,
         ais: Object.keys(results).join(', '),
         cost: orderData.amount || orderData.cost,
-        payment_id: orderData.paymentId
-     }
+        payment_id: orderData.paymentId,
+        report_content: comparisonReport // ADDED THIS PARAMETER
+      }
     };
 
     console.log('📧 Sending email with payload:', emailData);
@@ -160,16 +161,21 @@ exports.handler = async (event) => {
   try {
     const orderData = JSON.parse(event.body);
     console.log(`🧪 Order ${orderData.orderNumber} from ${orderData.email}`);
-    const selectedAIs = orderData.selectedAIs || ['Claude', 'Gemini'];
+    // Ensure 'ChatGPT' is included if that's what your front-end sends for 3 AIs.
+    // Otherwise, adjust this array based on what's truly selected for 3.
+    const selectedAIs = orderData.selectedAIs || ['Claude', 'Gemini', 'ChatGPT']; // Adjusted to potentially include ChatGPT
 
     const apiKeys = {
       Claude: process.env.ANTHROPIC_API_KEY,
-      Gemini: process.env.GOOGLE_API_KEY
+      Gemini: process.env.GOOGLE_API_KEY,
+      // Temporarily no API key for ChatGPT as it's mocked, but keep it here for future
+      ChatGPT: process.env.OPENAI_API_KEY // Ensure this env var exists if you enable it
     };
 
     const providers = {
       Claude: 'anthropic',
-      Gemini: 'google'
+      Gemini: 'google',
+      ChatGPT: 'openai' // Assuming 'openai' for ChatGPT if you enable it
     };
 
     const results = {};
@@ -196,11 +202,11 @@ exports.handler = async (event) => {
     for (const ai of selectedAIs) {
         let mockResponse = "";
         if (ai === 'Claude') {
-            mockResponse = "This is a mock response from Claude for debugging purposes. It's a placeholder to test the email functionality without hitting the actual AI API. This helps save costs during development.";
+            mockResponse = "This is a mock response from Claude for debugging purposes. It's a placeholder to test the email functionality without hitting the actual AI API. It helps save costs during development and ensures the structure is correct.";
         } else if (ai === 'Gemini') {
-            mockResponse = "Mock response from Gemini. For testing email integration, we are using simulated AI output instead of live API calls. This is efficient for debugging the email template and sending process.";
-        } else {
-            mockResponse = `Mock response for unknown AI: ${ai}.`;
+            mockResponse = "Mock response from Gemini. For testing email integration, we are using simulated AI output instead of live API calls. This is efficient for debugging the email template and sending process, ensuring all data points are present.";
+        } else if (ai === 'ChatGPT') {
+            mockResponse = "This is a mock response from ChatGPT. We are currently using mock data to test the end-to-end email delivery and content rendering process. This response helps verify that the comparison report includes all selected AI models correctly.";
         }
         results[ai] = {
             response: mockResponse,
@@ -210,7 +216,10 @@ exports.handler = async (event) => {
     }
     // END TEMPORARY MOCK
 
-    const emailSent = await sendResultsEmail(orderData.email, orderData, results);
+    // Generate the comparison report BEFORE sending the email
+    const comparisonReport = generateComparisonReport(results, orderData.prompt);
+
+    const emailSent = await sendResultsEmail(orderData.email, orderData, results, comparisonReport); // Pass the report here
     console.log(`✅ Order ${orderData.orderNumber} complete. Email sent: ${emailSent}`);
 
     return {
