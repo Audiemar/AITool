@@ -122,11 +122,11 @@ async function sendResultsEmail(email, orderData, results) {
     const emailData = {
       service_id: process.env.EMAILJS_SERVICE_ID || 'service_6deh10r',
       template_id: process.env.EMAILJS_TEMPLATE_ID || 'template_test_results',
-      // user_id is your Public Key
       user_id: process.env.EMAILJS_PUBLIC_KEY || 'WwSbSdi4EaiQMExvs',
-      // Private Key goes into the 'accessToken' field as per docs
       accessToken: process.env.EMAILJS_PRIVATE_KEY,
       template_params: {
+        // IMPORTANT: Verify 'recipient_email' matches the variable name in your EmailJS template's 'To Email' field
+        recipient_email: email, 
         order_number: orderData.orderNumber,
         prompt: orderData.prompt,
         ais: Object.keys(results).join(', '),
@@ -174,6 +174,8 @@ exports.handler = async (event) => {
     };
 
     const results = {};
+    // Uncomment the block below and remove the mock for live AI calls
+    /*
     for (const ai of selectedAIs) {
       const provider = providers[ai];
       const key = apiKeys[ai];
@@ -182,7 +184,6 @@ exports.handler = async (event) => {
         continue;
       }
       console.log(`⚙️ Calling ${ai}...`);
-      // REMEMBER TO UNCOMMENT THIS BLOCK AND REMOVE MOCKING AFTER EMAIL IS FIXED
       const res = await callAI(provider, orderData.prompt, key);
       results[ai] = {
         response: res,
@@ -190,27 +191,25 @@ exports.handler = async (event) => {
         timestamp: new Date().toISOString()
       };
     }
+    */
 
-    // IMPORTANT: If you want to keep costs down, re-introduce the AI mocking here
-    /*
-    const results = {}; // Initialize empty results
+    // TEMPORARY MOCK AI RESPONSES FOR DEBUGGING EMAIL SENDING (COMMENT OUT WHEN TESTING LIVE AI)
     for (const ai of selectedAIs) {
         let mockResponse = "";
         if (ai === 'Claude') {
-            mockResponse = "This is a mock response from Claude for debugging purposes. It's a placeholder to test the email functionality without hitting the actual AI API.";
+            mockResponse = "This is a mock response from Claude for debugging purposes. It's a placeholder to test the email functionality without hitting the actual AI API. This helps save costs during development.";
         } else if (ai === 'Gemini') {
-            mockResponse = "Mock response from Gemini. For testing email integration, we are using simulated AI output.";
+            mockResponse = "Mock response from Gemini. For testing email integration, we are using simulated AI output instead of live API calls. This is efficient for debugging the email template and sending process.";
         } else {
             mockResponse = `Mock response for unknown AI: ${ai}.`;
         }
         results[ai] = {
             response: mockResponse,
-            analysis: analyzeResponse(mockResponse, ai.toLowerCase()),
+            analysis: analyzeResponse(mockResponse, ai.toLowerCase()), // Still run analysis on mock response
             timestamp: new Date().toISOString()
         };
     }
-    */
-
+    // END TEMPORARY MOCK
 
     const emailSent = await sendResultsEmail(orderData.email, orderData, results);
     console.log(`✅ Order ${orderData.orderNumber} complete. Email sent: ${emailSent}`);
