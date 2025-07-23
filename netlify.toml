@@ -9,6 +9,13 @@
   NODE_VERSION = "20"
   SECRETS_SCAN_ENABLED = "false"
 
+# Force function routes for custom domain
+[[redirects]]
+  from = "/.netlify/functions/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+  force = false
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
