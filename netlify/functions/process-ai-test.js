@@ -195,6 +195,7 @@ async function sendResultsEmail(email, orderData, results, comparisonReportMarkd
       service_id: process.env.EMAILJS_SERVICE_ID || 'service_6deh10r',
       template_id: process.env.EMAILJS_TEMPLATE_ID || 'template_test_results',
       user_id: process.env.EMAILJS_PUBLIC_KEY || 'WwSbSdi4EaiQMExvs',
+      accessToken: process.env.EMAILJS_PRIVATE_KEY,  // 🔧 THIS IS THE FIX!
       template_params: {
         email: email,
         order_number: orderData.orderNumber,
@@ -218,6 +219,7 @@ async function sendResultsEmail(email, orderData, results, comparisonReportMarkd
     
     const text = await response.text();
     console.log('📬 EmailJS response:', response.status, text);
+    console.log('📧 Email sent:', response.ok);
     return response.ok;
   } catch (err) {
     console.error('🔥 sendResultsEmail() error:', err);
