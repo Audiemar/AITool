@@ -1,6 +1,6 @@
 // netlify/functions/process-ai-test.js
 
-// REMOVED: const { marked } = require('marked');
+// REMOVED: const { marked } = require('marked'); // Marked is not used for this setup
 
 // AI API Configurations
 const AI_CONFIG = {
@@ -29,12 +29,33 @@ const AI_CONFIG = {
         temperature: 0.7
       }
     })
+  },
+  // --- ADDED THIS CONFIG FOR OPENAI (ChatGPT) ---
+  openai: {
+    url: 'https://api.openai.com/v1/chat/completions',
+    headers: (apiKey) => ({
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    }),
+    body: (prompt) => ({
+      model: 'gpt-3.5-turbo', // Or 'gpt-4o' or other suitable model
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 1000
+    })
   }
+  // --- END ADDED CONFIG ---
 };
 
 async function callAI(provider, prompt, apiKey) {
-  const config = AI_CONFIG[provider];
+  const config = AI_CONFIG[provider]; // This line was failing because config was undefined
+  // If config is undefined, it means the provider string did not match a key in AI_CONFIG
+  if (!config) {
+      throw new Error(`Configuration for AI provider '${provider}' not found.`);
+  }
+
+  // Adjusted URL construction for OpenAI (which doesn't use query params for key)
   const url = provider === 'google' ? `${config.url}?key=${apiKey}` : config.url;
+
   try {
     console.log(`Calling ${provider} API...`);
     const requestBody = JSON.stringify(config.body(prompt));
@@ -55,6 +76,8 @@ async function callAI(provider, prompt, apiKey) {
         return data.content[0].text;
       case 'google':
         return data.candidates[0].content.parts[0].text;
+      case 'openai': // Handle OpenAI response structure
+        return data.choices[0].message.content;
       default:
         throw new Error(`Unknown provider: ${provider}`);
     }
@@ -114,7 +137,7 @@ function generateComparisonReport(results, prompt) {
   return report;
 }
 
-async function sendResultsEmail(email, orderData, results, comparisonReportMarkdown) { // Parameter name adjusted back to Markdown
+async function sendResultsEmail(email, orderData, results, comparisonReportMarkdown) {
   console.log('📨 Preparing to send results email...');
   console.log('Recipient email:', email); 
   if (!email || typeof email !== 'string' || !email.includes('@')) {
@@ -134,7 +157,7 @@ async function sendResultsEmail(email, orderData, results, comparisonReportMarkd
         ais: Object.keys(results).join(', '),
         cost: orderData.amount || orderData.cost,
         payment_id: orderData.paymentId,
-        report_content: comparisonReportMarkdown // Sending Markdown directly
+        report_content: comparisonReportMarkdown
       }
     };
 
@@ -165,25 +188,26 @@ exports.handler = async (event) => {
     const orderData = JSON.parse(event.body);
     console.log(`🧪 Order ${orderData.orderNumber} from ${orderData.email}`);
     
+    // Ensure 'ChatGPT' is included if that's what your front-end sends for 3 AIs.
     const selectedAIs = orderData.selectedAIs || ['Claude', 'Gemini', 'ChatGPT']; 
 
     const apiKeys = {
       Claude: process.env.ANTHROPIC_API_KEY,
       Gemini: process.env.GOOGLE_API_KEY,
-      ChatGPT: process.env.OPENAI_API_KEY
+      ChatGPT: process.env.OPENAI_API_KEY // Ensure this env var exists
     };
 
     const providers = {
       Claude: 'anthropic',
       Gemini: 'google',
-      ChatGPT: 'openai'
+      ChatGPT: 'openai' // Maps 'ChatGPT' to 'openai' provider config
     };
 
     const results = {};
     
-    // LIVE AI CALLS - MOCK RESPONSES HAVE BEEN REMOVED AND MARKED IS NOT USED HERE
+    // LIVE AI CALLS - MOCK RESPONSES ARE COMPLETELY REMOVED
     for (const ai of selectedAIs) {
-      const provider = providers[ai];
+      const provider = providers[ai]; // This will now correctly resolve 'openai' for 'ChatGPT'
       const key = apiKeys[ai];
       if (!key) {
         results[ai] = { response: `Missing API key for ${ai}`, analysis: { score: 0, pros: [], cons: ['Missing key'] } };
@@ -202,10 +226,6 @@ exports.handler = async (event) => {
     // Generate the comparison report (which is still markdown)
     const comparisonReportMarkdown = generateComparisonReport(results, orderData.prompt);
     
-    // REMOVED: const comparisonReportHtml = marked.parse(comparisonReportMarkdown); 
-    // Sending markdown directly as requested.
-
-
     // Send the results email, passing the Markdown version of the report
     const emailSent = await sendResultsEmail(orderData.email, orderData, results, comparisonReportMarkdown);
     console.log(`✅ Order ${orderData.orderNumber} complete. Email sent: ${emailSent}`);
