@@ -1,6 +1,8 @@
 // netlify/functions/process-ai-test.js
 
-// AI API Configurations (OpenAI disabled temporarily)
+// REMOVED: const { marked } = require('marked');
+
+// AI API Configurations
 const AI_CONFIG = {
   anthropic: {
     url: 'https://api.anthropic.com/v1/messages',
@@ -112,8 +114,9 @@ function generateComparisonReport(results, prompt) {
   return report;
 }
 
-async function sendResultsEmail(email, orderData, results, comparisonReport) {
+async function sendResultsEmail(email, orderData, results, comparisonReportMarkdown) { // Parameter name adjusted back to Markdown
   console.log('📨 Preparing to send results email...');
+  console.log('Recipient email:', email); 
   if (!email || typeof email !== 'string' || !email.includes('@')) {
     console.error('❌ Invalid or missing email address:', email);
     return false;
@@ -125,13 +128,13 @@ async function sendResultsEmail(email, orderData, results, comparisonReport) {
       user_id: process.env.EMAILJS_PUBLIC_KEY || 'WwSbSdi4EaiQMExvs',
       accessToken: process.env.EMAILJS_PRIVATE_KEY,
       template_params: {
-        email: email, // <--- This key MUST match what your EmailJS template expects for the recipient
+        email: email,
         order_number: orderData.orderNumber,
         prompt: orderData.prompt,
         ais: Object.keys(results).join(', '),
         cost: orderData.amount || orderData.cost,
         payment_id: orderData.paymentId,
-        report_content: comparisonReport // ADDED THIS PARAMETER
+        report_content: comparisonReportMarkdown // Sending Markdown directly
       }
     };
 
@@ -161,26 +164,24 @@ exports.handler = async (event) => {
   try {
     const orderData = JSON.parse(event.body);
     console.log(`🧪 Order ${orderData.orderNumber} from ${orderData.email}`);
-    // Ensure 'ChatGPT' is included if that's what your front-end sends for 3 AIs.
-    // Otherwise, adjust this array based on what's truly selected for 3.
-    const selectedAIs = orderData.selectedAIs || ['Claude', 'Gemini', 'ChatGPT']; // Adjusted to potentially include ChatGPT
+    
+    const selectedAIs = orderData.selectedAIs || ['Claude', 'Gemini', 'ChatGPT']; 
 
     const apiKeys = {
       Claude: process.env.ANTHROPIC_API_KEY,
       Gemini: process.env.GOOGLE_API_KEY,
-      // Temporarily no API key for ChatGPT as it's mocked, but keep it here for future
-      ChatGPT: process.env.OPENAI_API_KEY // Ensure this env var exists if you enable it
+      ChatGPT: process.env.OPENAI_API_KEY
     };
 
     const providers = {
       Claude: 'anthropic',
       Gemini: 'google',
-      ChatGPT: 'openai' // Assuming 'openai' for ChatGPT if you enable it
+      ChatGPT: 'openai'
     };
 
     const results = {};
-    // Uncomment the block below and remove the mock for live AI calls
-    /*
+    
+    // LIVE AI CALLS - MOCK RESPONSES HAVE BEEN REMOVED AND MARKED IS NOT USED HERE
     for (const ai of selectedAIs) {
       const provider = providers[ai];
       const key = apiKeys[ai];
@@ -196,30 +197,17 @@ exports.handler = async (event) => {
         timestamp: new Date().toISOString()
       };
     }
-    */
+    // END LIVE AI CALLS
 
-    // TEMPORARY MOCK AI RESPONSES FOR DEBUGGING EMAIL SENDING (COMMENT OUT WHEN TESTING LIVE AI)
-    for (const ai of selectedAIs) {
-        let mockResponse = "";
-        if (ai === 'Claude') {
-            mockResponse = "This is a mock response from Claude for debugging purposes. It's a placeholder to test the email functionality without hitting the actual AI API. It helps save costs during development and ensures the structure is correct.";
-        } else if (ai === 'Gemini') {
-            mockResponse = "Mock response from Gemini. For testing email integration, we are using simulated AI output instead of live API calls. This is efficient for debugging the email template and sending process, ensuring all data points are present.";
-        } else if (ai === 'ChatGPT') {
-            mockResponse = "This is a mock response from ChatGPT. We are currently using mock data to test the end-to-end email delivery and content rendering process. This response helps verify that the comparison report includes all selected AI models correctly.";
-        }
-        results[ai] = {
-            response: mockResponse,
-            analysis: analyzeResponse(mockResponse, ai.toLowerCase()), // Still run analysis on mock response
-            timestamp: new Date().toISOString()
-        };
-    }
-    // END TEMPORARY MOCK
+    // Generate the comparison report (which is still markdown)
+    const comparisonReportMarkdown = generateComparisonReport(results, orderData.prompt);
+    
+    // REMOVED: const comparisonReportHtml = marked.parse(comparisonReportMarkdown); 
+    // Sending markdown directly as requested.
 
-    // Generate the comparison report BEFORE sending the email
-    const comparisonReport = generateComparisonReport(results, orderData.prompt);
 
-    const emailSent = await sendResultsEmail(orderData.email, orderData, results, comparisonReport); // Pass the report here
+    // Send the results email, passing the Markdown version of the report
+    const emailSent = await sendResultsEmail(orderData.email, orderData, results, comparisonReportMarkdown);
     console.log(`✅ Order ${orderData.orderNumber} complete. Email sent: ${emailSent}`);
 
     return {
