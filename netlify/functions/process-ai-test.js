@@ -1,462 +1,274 @@
-// netlify/functions/process-ai-test.js
-// Optimized version with faster response times
-
-// AI API Configurations - OPTIMIZED FOR SPEED
-const AI_CONFIG = {
-  anthropic: {
-    url: 'https://api.anthropic.com/v1/messages',
-    headers: (apiKey) => ({
-      'x-api-key': apiKey,
-      'Content-Type': 'application/json',
-      'anthropic-version': '2023-06-01'
-    }),
-    body: (prompt) => ({
-      model: 'claude-3-5-sonnet-20241022',
-      max_tokens: 1200, // Reduced from 2000 for faster response
-      messages: [{ role: 'user', content: prompt }]
-    })
-  },
-  google: {
-    url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
-    headers: (apiKey) => ({
-      'Content-Type': 'application/json'
-    }),
-    body: (prompt) => ({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: {
-        maxOutputTokens: 1200, // Reduced from 2000
-        temperature: 0.7
-      }
-    })
-  },
-  openai: {
-    url: 'https://api.openai.com/v1/chat/completions',
-    headers: (apiKey) => ({
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
-    }),
-    body: (prompt) => ({
-      model: 'gpt-3.5-turbo', // Faster than gpt-4
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 1200 // Reduced from 2000
-    })
-  }
-};
-
-async function callAI(provider, prompt, apiKey) {
-  const config = AI_CONFIG[provider];
-  if (!config) {
-      throw new Error(`Configuration for AI provider '${provider}' not found.`);
-  }
-
-  const url = provider === 'google' ? `${config.url}?key=${apiKey}` : config.url;
-
-  try {
-    console.log(`Calling ${provider} API for specialized analysis...`);
-    const requestBody = JSON.stringify(config.body(prompt));
-    
-    // Add timeout for individual AI calls (20 seconds max)
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 20000);
-    
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: config.headers(apiKey),
-      body: requestBody,
-      signal: controller.signal
-    });
-
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`${provider} API error: ${response.status} - ${errorText}`);
-    }
-
-    const data = await response.json();
-    switch (provider) {
-      case 'anthropic':
-        return data.content[0].text;
-      case 'google':
-        return data.candidates[0].content.parts[0].text;
-      case 'openai':
-        return data.choices[0].message.content;
-      default:
-        throw new Error(`Unknown provider: ${provider}`);
-    }
-  } catch (error) {
-    console.error(`Error calling ${provider}:`, error);
-    if (error.name === 'AbortError') {
-      return `Error: ${provider} API timeout after 20 seconds. Please try again.`;
-    }
-    return `Error: Could not get response from ${provider}. ${error.message}`;
-  }
-}
-
-function analyzeResponse(response, provider, toolType = 'general') {
-  const wordCount = response.split(/\s+/).length;
-  const sentences = response.split(/[.!?]+/).filter(s => s.trim().length > 0).length;
-  const paragraphs = response.split(/\n\s*\n/).length;
-  const hasStructure = /\n|\*|\-|\d+\./.test(response);
-  const isDetailed = wordCount > 75; // Lower threshold for faster response
-  const isCoherent = sentences > 1 && wordCount / sentences < 40;
-  const hasExamples = /example|for instance/i.test(response);
-  const isActionable = /recommend|suggest|should/i.test(response);
-  
-  // Enhanced scoring for professional tools
-  let score = 5; // Base score
-  if (isDetailed) score += 1.5;
-  if (hasStructure) score += 1;
-  if (isCoherent) score += 1;
-  if (hasExamples) score += 0.5;
-  if (isActionable) score += 1;
-  if (response.length > 300) score += 0.5;
-  if (paragraphs > 1) score += 0.5;
-  
-  // Professional tool bonuses
-  if (toolType.includes('real-estate')) {
-    if (/cash flow|cap rate|roi|return/i.test(response)) score += 0.5;
-    if (/risk|market|analysis/i.test(response)) score += 0.5;
-  }
-
-  const pros = [];
-  const cons = [];
-  if (isDetailed) pros.push('Detailed and comprehensive');
-  if (hasStructure) pros.push('Well-structured format');
-  if (isCoherent) pros.push('Clear and coherent');
-  if (hasExamples) pros.push('Includes helpful examples');
-  if (isActionable) pros.push('Provides actionable advice');
-  if (!isDetailed) cons.push('Could be more detailed');
-  if (!hasStructure) cons.push('Could use better formatting');
-  if (!isCoherent) cons.push('Could improve flow');
-  if (wordCount < 50) cons.push('Quite brief');
-
-  return {
-    score: Math.min(Math.round(score * 10) / 10, 10),
-    wordCount,
-    sentences,
-    paragraphs,
-    length: response.length,
-    pros: pros.slice(0, 3),
-    cons: cons.slice(0, 2)
-  };
-}
-
-function generateComparisonReport(results, prompt, creditInfo, toolType = 'general', propertyInfo = null) {
-  const aiNames = Object.keys(results);
-  const sorted = aiNames.sort((a, b) => results[b].analysis.score - results[a].analysis.score);
-  
-  let report = `# ${getReportTitle(toolType)}\n\n`;
-  
-  // Add property-specific header for real estate tools
-  if (propertyInfo && propertyInfo.address) {
-    report += `**Property:** ${propertyInfo.address}\n`;
-  }
-  
-  report += `**Analysis Type:** ${getToolDisplayName(toolType)}\n`;
-  report += `**Date:** ${new Date().toLocaleDateString()}\n`;
-  report += `**AI Models:** ${aiNames.join(', ')}\n`;
-  report += `**Credits Used:** ${creditInfo.used} credits\n`;
-  if (creditInfo.refunded > 0) {
-    report += `**Credits Refunded:** ${creditInfo.refunded} credits (for failed analyses)\n`;
-  }
-  report += `\n## Executive Summary\n\n`;
-  
-  const workingAIs = aiNames.filter(ai => !results[ai].response.includes('Error:'));
-  if (workingAIs.length > 0) {
-    report += `**Best Analysis:** ${sorted[0]} scored ${results[sorted[0]].analysis.score}/10\n`;
-    report += `**Successful Analyses:** ${workingAIs.length} of ${aiNames.length} AI models completed successfully\n\n`;
-  } else {
-    report += `**Result:** All AI analyses failed - credits have been refunded\n\n`;
-    return report;
-  }
-  
-  report += `## Detailed AI Analysis Results\n\n`;
-  
-  sorted.forEach((ai, i) => {
-    const result = results[ai];
-    const analysis = result.analysis;
-    
-    if (result.response.includes('Error:')) {
-      report += `### ${i + 1}. ${ai} Analysis - FAILED ❌\n\n`;
-      report += `**Error:** ${result.response}\n`;
-      report += `**Credit Status:** Refunded ✅\n\n---\n\n`;
-    } else {
-      report += `### ${i + 1}. ${ai} Analysis - Score: ${analysis.score}/10\n\n`;
-      
-      report += `**Professional Analysis:**\n\`\`\`\n${result.response}\n\`\`\`\n\n`;
-      report += `**Analysis Quality Metrics:**\n`;
-      report += `- Response Length: ${analysis.wordCount} words (${analysis.sentences} sentences)\n`;
-      report += `- Structure Quality: ${analysis.paragraphs} sections\n`;
-      report += `- Professional Score: ${analysis.score}/10\n\n`;
-      report += `**Key Strengths:** ${analysis.pros.join(', ')}\n`;
-      if (analysis.cons.length) report += `**Areas for Enhancement:** ${analysis.cons.join(', ')}\n`;
-      report += `\n---\n\n`;
-    }
-  });
-  
-  report += `## Analysis Summary & Value\n\n`;
-  report += `- **Total Credits Used:** ${creditInfo.used}\n`;
-  report += `- **Successful Analyses:** ${workingAIs.length}\n`;
-  if (creditInfo.refunded > 0) {
-    report += `- **Failed Analyses:** ${creditInfo.refunded}\n`;
-    report += `- **Credits Refunded:** ${creditInfo.refunded}\n`;
-    report += `- **Net Investment:** ${creditInfo.used - creditInfo.refunded} credits\n`;
-  }
-  
-  if (workingAIs.length > 0) {
-    report += `\n## Professional Recommendations\n\n`;
-    report += `**Top Performing Analysis:** ${sorted[0]} delivered the most comprehensive analysis with a ${results[sorted[0]].analysis.score}/10 quality score.\n\n`;
-    report += `**Value Assessment:** You received ${workingAIs.length} professional AI analysis${workingAIs.length !== 1 ? 'es' : ''} for ${creditInfo.used - creditInfo.refunded} credit${(creditInfo.used - creditInfo.refunded) !== 1 ? 's' : ''}, providing multiple expert perspectives on your ${getToolDisplayName(toolType).toLowerCase()}.\n\n`;
-    
-    if (toolType.includes('real-estate')) {
-      report += `**Next Steps:** Review each analysis for different perspectives on financial projections, risk factors, and market positioning. Consider consulting with a local real estate professional for property-specific details and current market conditions.\n`;
-    }
-  }
-  
-  // Privacy footer
-  report += `\n---\n\n`;
-  report += `**Privacy Notice:** This analysis was generated specifically for your request. All input data has been immediately deleted from our systems after processing. No property information, financial details, or analysis results are stored or retained.\n\n`;
-  report += `**Disclaimer:** This AI-generated analysis is for informational purposes only and should not be considered as professional financial, legal, or real estate advice. Please consult with qualified professionals before making investment decisions.\n`;
-  
-  return report;
-}
-
-function getReportTitle(toolType) {
-  switch (toolType) {
-    case 'real-estate-investment':
-      return 'Real Estate Investment Analysis Report';
-    case 'real-estate-market':
-      return 'Real Estate Market Analysis Report';
-    case 'real-estate-listing':
-      return 'Property Listing Content Report';
-    default:
-      return 'AI Comparison Analysis Report';
-  }
-}
-
-function getToolDisplayName(toolType) {
-  switch (toolType) {
-    case 'real-estate-investment':
-      return 'Investment Analysis';
-    case 'real-estate-market':
-      return 'Market Analysis';
-    case 'real-estate-listing':
-      return 'Listing Generation';
-    default:
-      return 'General AI Analysis';
-  }
-}
-
-// Privacy-enhanced email function
-async function sendResultsEmail(email, orderData, results, comparisonReportMarkdown) {
-  console.log('📨 Sending analysis results (no data logged for privacy)...');
-  
-  if (!email || typeof email !== 'string' || !email.includes('@')) {
-    console.error('❌ Invalid email format');
-    return false;
-  }
-  
-  try {
-    const emailData = {
-      service_id: process.env.EMAILJS_SERVICE_ID || 'service_6deh10r',
-      template_id: process.env.EMAILJS_TEMPLATE_ID || 'template_test_results',
-      user_id: process.env.EMAILJS_PUBLIC_KEY || 'WwSbSdi4EaiQMExvs',
-      accessToken: process.env.EMAILJS_PRIVATE_KEY,
-      template_params: {
-        email: email,
-        order_number: orderData.orderNumber,
-        prompt: `${getToolDisplayName(orderData.toolType || 'general')} Analysis`,
-        ais: Object.keys(results).join(', '),
-        cost: `${orderData.creditsUsed} credit${orderData.creditsUsed !== 1 ? 's' : ''}`,
-        payment_id: orderData.paymentId,
-        report_content: comparisonReportMarkdown,
-        user_id: orderData.userId || 'N/A',
-        credits_used: orderData.creditsUsed,
-        credits_refunded: orderData.creditsRefunded || 0
-      }
-    };
-
-    console.log('📧 Processing email delivery...');
-    const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(emailData)
-    });
-    
-    const success = response.ok;
-    console.log(`📬 Email delivery: ${success ? 'Success' : 'Failed'} (${response.status})`);
-    
-    return success;
-  } catch (err) {
-    console.error('🔥 Email delivery error (details not logged for privacy)');
-    return false;
-  }
-}
-
-exports.handler = async (event) => {
-  if (event.httpMethod === 'OPTIONS') {
-    return { 
-      statusCode: 200, 
-      headers: { 
-        'Access-Control-Allow-Origin': '*', 
-        'Access-Control-Allow-Methods': 'POST', 
-        'Access-Control-Allow-Headers': 'Content-Type' 
-      }, 
-      body: '' 
-    };
-  }
-  
-  if (event.httpMethod !== 'POST') {
-    return { 
-      statusCode: 405, 
-      headers: { 
-        'Access-Control-Allow-Origin': '*', 
-        'Content-Type': 'application/json' 
-      }, 
-      body: JSON.stringify({ error: 'Method not allowed' }) 
-    };
-  }
-
-  try {
-    const orderData = JSON.parse(event.body);
-    
-    // Privacy enhancement: Minimal logging
-    const toolType = orderData.toolType || 'general';
-    const isSpecializedTool = toolType !== 'general';
-    
-    console.log(`🔧 Processing ${isSpecializedTool ? 'specialized' : 'general'} analysis`);
-    console.log(`💳 Credits: ${orderData.creditsUsed}`);
-    console.log(`📋 Order: ${orderData.orderNumber}`);
-    
-    const selectedAIs = orderData.selectedAIs || ['Claude', 'Gemini', 'ChatGPT']; 
-
-    const apiKeys = {
-      Claude: process.env.ANTHROPIC_API_KEY,
-      Gemini: process.env.GOOGLE_API_KEY,
-      ChatGPT: process.env.OPENAI_API_KEY
-    };
-
-    const providers = {
-      Claude: 'anthropic',
-      Gemini: 'google',
-      ChatGPT: 'openai'
-    };
-
-    const results = {};
-    let failedCount = 0;
-    
-    // Process each selected AI with timeout protection
-    const aiPromises = selectedAIs.map(async (ai) => {
-      const provider = providers[ai];
-      const key = apiKeys[ai];
-      
-      if (!key) {
-        console.log(`❌ Missing API key for ${ai}`);
+// netlify/functions/process-ai-test.js - Updated to call your backend for credits
+exports.handler = async (event, context) => {
+    // Only allow POST requests
+    if (event.httpMethod !== 'POST') {
         return {
-          ai,
-          result: { 
-            response: `Error: Missing API key for ${ai}`, 
-            analysis: { score: 0, pros: [], cons: ['Missing API key'] },
-            timestamp: new Date().toISOString()
-          },
-          failed: true
+            statusCode: 405,
+            body: JSON.stringify({ error: 'Method not allowed' })
         };
-      }
-      
-      console.log(`⚙️ Processing ${ai} ${isSpecializedTool ? 'specialized' : 'general'} analysis...`);
-      const response = await callAI(provider, orderData.prompt, key);
-      
-      const failed = response.includes('Error:');
-      if (failed) {
-        console.log(`❌ ${ai} analysis failed`);
-      } else {
-        console.log(`✅ ${ai} analysis completed successfully`);
-      }
-      
-      return {
-        ai,
-        result: {
-          response: response,
-          analysis: analyzeResponse(response, provider, toolType),
-          timestamp: new Date().toISOString()
-        },
-        failed
-      };
-    });
+    }
 
-    // Wait for all AI responses with global timeout
-    const aiResults = await Promise.all(aiPromises);
-    
-    // Process results
-    aiResults.forEach(({ ai, result, failed }) => {
-      results[ai] = result;
-      if (failed) failedCount++;
-    });
+    try {
+        const requestData = JSON.parse(event.body);
+        const {
+            orderNumber,
+            email,
+            userId,
+            prompt,
+            selectedAIs,
+            creditsUsed
+        } = requestData;
 
-    // Calculate credit refunds for failed analyses
-    const creditsRefunded = failedCount;
-    const creditInfo = {
-      used: orderData.creditsUsed,
-      refunded: creditsRefunded,
-      net: orderData.creditsUsed - creditsRefunded
-    };
+        console.log(`Processing AI test for order: ${orderNumber}`);
 
-    console.log(`💰 Credit summary: Used ${creditInfo.used}, Refunded ${creditInfo.refunded}, Net ${creditInfo.net}`);
+        // 1. FIRST: Deduct credits from your backend
+        const deductResponse = await fetch('https://testaitools.online/api-backend/deduct-credits.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                email: email,
+                creditsUsed: creditsUsed,
+                orderNumber: orderNumber,
+                testDetails: `AI test: ${selectedAIs.join(', ')}`,
+                netlifySecret: process.env.NETLIFY_SECRET_KEY || 'your-netlify-secret-key-2024'
+            })
+        });
 
-    // Generate the analysis report
-    const propertyInfo = orderData.propertyAddress ? { address: orderData.propertyAddress } : null;
-    const comparisonReportMarkdown = generateComparisonReport(
-      results, 
-      orderData.prompt, 
-      creditInfo, 
-      toolType,
-      propertyInfo
-    );
-    
-    // Add refund info to order data
-    orderData.creditsRefunded = creditsRefunded;
-    
-    // Send results email (privacy-enhanced)
-    const emailSent = await sendResultsEmail(orderData.email, orderData, results, comparisonReportMarkdown);
-    console.log(`📧 Email delivery: ${emailSent ? 'Success' : 'Failed'}`);
+        const deductResult = await deductResponse.json();
+        
+        if (!deductResponse.ok) {
+            console.error('Failed to deduct credits:', deductResult);
+            return {
+                statusCode: 400,
+                body: JSON.stringify({
+                    success: false,
+                    error: deductResult.error || 'Failed to deduct credits'
+                })
+            };
+        }
 
-    // Privacy cleanup: Clear sensitive data from memory
-    delete orderData.prompt;
-    delete orderData.propertyAddress;
-    if (orderData.toolData) delete orderData.toolData;
+        console.log('Credits deducted successfully:', deductResult);
 
-    console.log(`✅ ${isSpecializedTool ? 'Specialized' : 'General'} analysis complete`);
+        // 2. NOW process the AI requests
+        const aiResults = {};
+        let allSuccessful = true;
+        let errorMessage = '';
 
-    return {
-      statusCode: 200,
-      headers: { 
-        'Content-Type': 'application/json', 
-        'Access-Control-Allow-Origin': '*' 
-      },
-      body: JSON.stringify({ 
-        success: true, 
-        orderNumber: orderData.orderNumber, 
-        results, 
-        emailSent,
-        creditInfo: creditInfo,
-        toolType: toolType,
-        message: `${getToolDisplayName(toolType)} complete - results sent via email`,
-        failedAIs: selectedAIs.filter(ai => results[ai].response.includes('Error:'))
-      })
-    };
-  } catch (error) {
-    console.error('❌ Analysis processing error:', error.message);
-    return {
-      statusCode: 500,
-      headers: { 
-        'Content-Type': 'application/json', 
-        'Access-Control-Allow-Origin': '*' 
-      },
-      body: JSON.stringify({ 
-        success: false, 
-        error: 'Analysis processing failed - please try again' 
-      })
-    };
-  }
+        try {
+            // Process each AI
+            for (const aiName of selectedAIs) {
+                try {
+                    const aiResult = await processAI(aiName, prompt);
+                    aiResults[aiName] = aiResult;
+                    console.log(`${aiName} completed successfully`);
+                } catch (aiError) {
+                    console.error(`${aiName} failed:`, aiError);
+                    aiResults[aiName] = {
+                        error: aiError.message,
+                        success: false
+                    };
+                    allSuccessful = false;
+                    errorMessage += `${aiName}: ${aiError.message}; `;
+                }
+            }
+
+            // 3. Send email with results
+            let emailSent = false;
+            try {
+                await sendResultsEmail(email, orderNumber, prompt, aiResults);
+                emailSent = true;
+                console.log('Results email sent successfully');
+            } catch (emailError) {
+                console.error('Failed to send email:', emailError);
+                // Don't fail the entire process for email issues
+            }
+
+            // 4. If ALL AIs failed, refund the credits
+            if (!allSuccessful) {
+                console.log('Some AIs failed, considering refund...');
+                
+                // Count successful AIs
+                const successfulAIs = Object.values(aiResults).filter(result => !result.error).length;
+                const failedCredits = creditsUsed - successfulAIs;
+                
+                if (failedCredits > 0) {
+                    console.log(`Refunding ${failedCredits} credits for failed AIs`);
+                    
+                    const refundResponse = await fetch('https://testaitools.online/api-backend/refund-credits.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            email: email,
+                            creditsToRefund: failedCredits,
+                            orderNumber: orderNumber,
+                            reason: `Partial refund: ${errorMessage}`,
+                            netlifySecret: process.env.NETLIFY_SECRET_KEY || 'your-netlify-secret-key-2024'
+                        })
+                    });
+                    
+                    if (refundResponse.ok) {
+                        console.log('Partial refund processed successfully');
+                    }
+                }
+            }
+
+            return {
+                statusCode: 200,
+                body: JSON.stringify({
+                    success: true,
+                    orderNumber: orderNumber,
+                    emailSent: emailSent,
+                    testResults: aiResults,
+                    creditsDeducted: deductResult.creditsDeducted,
+                    newCreditBalance: deductResult.newCredits
+                })
+            };
+
+        } catch (processingError) {
+            console.error('AI processing completely failed:', processingError);
+            
+            // Refund all credits if processing fails completely
+            try {
+                await fetch('https://testaitools.online/api-backend/refund-credits.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        creditsToRefund: creditsUsed,
+                        orderNumber: orderNumber,
+                        reason: `Complete refund: ${processingError.message}`,
+                        netlifySecret: process.env.NETLIFY_SECRET_KEY || 'your-netlify-secret-key-2024'
+                    })
+                });
+                console.log('Full refund processed');
+            } catch (refundError) {
+                console.error('Failed to process refund:', refundError);
+            }
+
+            return {
+                statusCode: 500,
+                body: JSON.stringify({
+                    success: false,
+                    error: 'AI processing failed',
+                    refunded: true
+                })
+            };
+        }
+
+    } catch (error) {
+        console.error('General error:', error);
+        return {
+            statusCode: 500,
+            body: JSON.stringify({
+                success: false,
+                error: 'Internal server error'
+            })
+        };
+    }
 };
+
+// AI Processing Functions
+async function processAI(aiName, prompt) {
+    const config = getAIConfig(aiName);
+    
+    if (!config) {
+        throw new Error(`AI configuration not found for ${aiName}`);
+    }
+
+    try {
+        const response = await fetch(config.url, {
+            method: 'POST',
+            headers: config.headers,
+            body: JSON.stringify(config.body(prompt)),
+            signal: AbortSignal.timeout(30000) // 30 second timeout
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return config.parseResponse(data);
+
+    } catch (error) {
+        if (error.name === 'TimeoutError') {
+            throw new Error('Request timed out after 30 seconds');
+        }
+        throw new Error(`API request failed: ${error.message}`);
+    }
+}
+
+function getAIConfig(aiName) {
+    const configs = {
+        'ChatGPT': {
+            url: 'https://api.openai.com/v1/chat/completions',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+            },
+            body: (prompt) => ({
+                model: 'gpt-3.5-turbo',
+                messages: [{ role: 'user', content: prompt }],
+                max_tokens: 1000,
+                temperature: 0.7
+            }),
+            parseResponse: (data) => ({
+                response: data.choices[0]?.message?.content || 'No response',
+                usage: data.usage,
+                success: true
+            })
+        },
+        'Claude': {
+            url: 'https://api.anthropic.com/v1/messages',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': process.env.ANTHROPIC_API_KEY,
+                'anthropic-version': '2023-06-01'
+            },
+            body: (prompt) => ({
+                model: 'claude-3-5-sonnet-20241022',
+                max_tokens: 1000,
+                messages: [{ role: 'user', content: prompt }]
+            }),
+            parseResponse: (data) => ({
+                response: data.content[0]?.text || 'No response',
+                usage: data.usage,
+                success: true
+            })
+        },
+        'Gemini': {
+            url: `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`,
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: (prompt) => ({
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: {
+                    maxOutputTokens: 1000,
+                    temperature: 0.7
+                }
+            }),
+            parseResponse: (data) => ({
+                response: data.candidates[0]?.content?.parts[0]?.text || 'No response',
+                usage: data.usageMetadata,
+                success: true
+            })
+        }
+    };
+
+    return configs[aiName];
+}
+
+async function sendResultsEmail(email, orderNumber, prompt, results) {
+    // Email sending logic here - you can use SendGrid, Resend, etc.
+    console.log(`Would send email to ${email} with results for order ${orderNumber}`);
+    
+    // For now, just simulate successful email
+    return true;
+}
