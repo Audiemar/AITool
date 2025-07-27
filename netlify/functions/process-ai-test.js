@@ -290,9 +290,31 @@ function getAIConfig(aiName) {
 }
 
 async function sendResultsEmail(email, orderNumber, prompt, results) {
-    // Email sending logic here - you can use SendGrid, Resend, etc.
-    console.log(`Would send email to ${email} with results for order ${orderNumber}`);
-    
-    // For now, just simulate successful email
-    return true;
+    try {
+        const response = await fetch('https://testaitools.online/api-backend/send-test-results.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                email: email,
+                orderNumber: orderNumber,
+                prompt: prompt,
+                results: results,
+                netlifySecret: process.env.NETLIFY_SECRET_KEY || 'your-netlify-secret-key-2024'
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Email API responded with ${response.status}`);
+        }
+        
+        const result = await response.json();
+        console.log('Email sent successfully:', result);
+        return true;
+        
+    } catch (error) {
+        console.error('Failed to send email:', error);
+        throw error;
+    }
 }
