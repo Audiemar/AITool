@@ -1,9 +1,28 @@
 // netlify/functions/process-ai-test.js - Updated to call your backend for credits
 exports.handler = async (event, context) => {
+    // CORS headers for all responses
+    const corsHeaders = {
+        'Access-Control-Allow-Origin': 'https://testaitools.online',
+        'Access-Control-Allow-Headers': 'Content-Type, Accept, Origin',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Max-Age': '86400',
+        'Content-Type': 'application/json'
+    };
+
+    // Handle preflight OPTIONS request
+    if (event.httpMethod === 'OPTIONS') {
+        return {
+            statusCode: 200,
+            headers: corsHeaders,
+            body: ''
+        };
+    }
+
     // Only allow POST requests
     if (event.httpMethod !== 'POST') {
         return {
             statusCode: 405,
+            headers: corsHeaders,
             body: JSON.stringify({ error: 'Method not allowed' })
         };
     }
@@ -42,6 +61,7 @@ exports.handler = async (event, context) => {
             console.error('Failed to deduct credits:', deductResult);
             return {
                 statusCode: 400,
+                headers: corsHeaders,
                 body: JSON.stringify({
                     success: false,
                     error: deductResult.error || 'Failed to deduct credits'
@@ -118,6 +138,7 @@ exports.handler = async (event, context) => {
 
             return {
                 statusCode: 200,
+                headers: corsHeaders,
                 body: JSON.stringify({
                     success: true,
                     orderNumber: orderNumber,
@@ -153,6 +174,7 @@ exports.handler = async (event, context) => {
 
             return {
                 statusCode: 500,
+                headers: corsHeaders,
                 body: JSON.stringify({
                     success: false,
                     error: 'AI processing failed',
@@ -165,6 +187,7 @@ exports.handler = async (event, context) => {
         console.error('General error:', error);
         return {
             statusCode: 500,
+            headers: corsHeaders,
             body: JSON.stringify({
                 success: false,
                 error: 'Internal server error'
