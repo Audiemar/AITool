@@ -266,9 +266,10 @@ function getAIConfig(aiName) {
             })
         },
         'Gemini': {
-            url: `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`,
+            url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'X-goog-api-key': process.env.GEMINI_API_KEY
             },
             body: (prompt) => ({
                 contents: [{ parts: [{ text: prompt }] }],
