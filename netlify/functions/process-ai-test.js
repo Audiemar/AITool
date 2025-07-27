@@ -1,7 +1,7 @@
-// netlify/functions/process-ai-test-credits.js
-// Enhanced version with privacy-first real estate tools support
+// netlify/functions/process-ai-test.js
+// Optimized version with faster response times
 
-// AI API Configurations
+// AI API Configurations - OPTIMIZED FOR SPEED
 const AI_CONFIG = {
   anthropic: {
     url: 'https://api.anthropic.com/v1/messages',
@@ -12,7 +12,7 @@ const AI_CONFIG = {
     }),
     body: (prompt) => ({
       model: 'claude-3-5-sonnet-20241022',
-      max_tokens: 2000, // Increased for detailed analysis
+      max_tokens: 1200, // Reduced from 2000 for faster response
       messages: [{ role: 'user', content: prompt }]
     })
   },
@@ -24,7 +24,7 @@ const AI_CONFIG = {
     body: (prompt) => ({
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
-        maxOutputTokens: 2000,
+        maxOutputTokens: 1200, // Reduced from 2000
         temperature: 0.7
       }
     })
@@ -36,9 +36,9 @@ const AI_CONFIG = {
       'Authorization': `Bearer ${apiKey}`
     }),
     body: (prompt) => ({
-      model: 'gpt-4',
+      model: 'gpt-3.5-turbo', // Faster than gpt-4
       messages: [{ role: 'user', content: prompt }],
-      max_tokens: 2000
+      max_tokens: 1200 // Reduced from 2000
     })
   }
 };
@@ -54,11 +54,19 @@ async function callAI(provider, prompt, apiKey) {
   try {
     console.log(`Calling ${provider} API for specialized analysis...`);
     const requestBody = JSON.stringify(config.body(prompt));
+    
+    // Add timeout for individual AI calls (20 seconds max)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
+    
     const response = await fetch(url, {
       method: 'POST',
       headers: config.headers(apiKey),
-      body: requestBody
+      body: requestBody,
+      signal: controller.signal
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -78,6 +86,9 @@ async function callAI(provider, prompt, apiKey) {
     }
   } catch (error) {
     console.error(`Error calling ${provider}:`, error);
+    if (error.name === 'AbortError') {
+      return `Error: ${provider} API timeout after 20 seconds. Please try again.`;
+    }
     return `Error: Could not get response from ${provider}. ${error.message}`;
   }
 }
@@ -87,20 +98,20 @@ function analyzeResponse(response, provider, toolType = 'general') {
   const sentences = response.split(/[.!?]+/).filter(s => s.trim().length > 0).length;
   const paragraphs = response.split(/\n\s*\n/).length;
   const hasStructure = /\n|\*|\-|\d+\./.test(response);
-  const isDetailed = wordCount > 150; // Higher threshold for professional tools
+  const isDetailed = wordCount > 75; // Lower threshold for faster response
   const isCoherent = sentences > 1 && wordCount / sentences < 40;
   const hasExamples = /example|for instance/i.test(response);
   const isActionable = /recommend|suggest|should/i.test(response);
   
   // Enhanced scoring for professional tools
-  let score = 6; // Higher base score for specialized analysis
+  let score = 5; // Base score
   if (isDetailed) score += 1.5;
   if (hasStructure) score += 1;
   if (isCoherent) score += 1;
   if (hasExamples) score += 0.5;
   if (isActionable) score += 1;
-  if (response.length > 500) score += 0.5;
-  if (paragraphs > 2) score += 0.5;
+  if (response.length > 300) score += 0.5;
+  if (paragraphs > 1) score += 0.5;
   
   // Professional tool bonuses
   if (toolType.includes('real-estate')) {
@@ -110,15 +121,15 @@ function analyzeResponse(response, provider, toolType = 'general') {
 
   const pros = [];
   const cons = [];
-  if (isDetailed) pros.push('Comprehensive and detailed analysis');
-  if (hasStructure) pros.push('Well-organized professional format');
-  if (isCoherent) pros.push('Clear and coherent presentation');
-  if (hasExamples) pros.push('Includes relevant examples');
-  if (isActionable) pros.push('Provides actionable recommendations');
-  if (!isDetailed) cons.push('Could provide more detailed analysis');
-  if (!hasStructure) cons.push('Could improve formatting structure');
-  if (!isCoherent) cons.push('Could improve clarity and flow');
-  if (wordCount < 100) cons.push('Analysis could be more comprehensive');
+  if (isDetailed) pros.push('Detailed and comprehensive');
+  if (hasStructure) pros.push('Well-structured format');
+  if (isCoherent) pros.push('Clear and coherent');
+  if (hasExamples) pros.push('Includes helpful examples');
+  if (isActionable) pros.push('Provides actionable advice');
+  if (!isDetailed) cons.push('Could be more detailed');
+  if (!hasStructure) cons.push('Could use better formatting');
+  if (!isCoherent) cons.push('Could improve flow');
+  if (wordCount < 50) cons.push('Quite brief');
 
   return {
     score: Math.min(Math.round(score * 10) / 10, 10),
@@ -173,12 +184,7 @@ function generateComparisonReport(results, prompt, creditInfo, toolType = 'gener
     } else {
       report += `### ${i + 1}. ${ai} Analysis - Score: ${analysis.score}/10\n\n`;
       
-      // Privacy note: Only include analysis summary, not full response
-      const responsePreview = result.response.length > 2000 
-        ? result.response.substring(0, 2000) + '\n\n[Analysis continues...]'
-        : result.response;
-        
-      report += `**Professional Analysis:**\n\`\`\`\n${responsePreview}\n\`\`\`\n\n`;
+      report += `**Professional Analysis:**\n\`\`\`\n${result.response}\n\`\`\`\n\n`;
       report += `**Analysis Quality Metrics:**\n`;
       report += `- Response Length: ${analysis.wordCount} words (${analysis.sentences} sentences)\n`;
       report += `- Structure Quality: ${analysis.paragraphs} sections\n`;
@@ -242,7 +248,7 @@ function getToolDisplayName(toolType) {
   }
 }
 
-// Privacy-enhanced email function - no data logging
+// Privacy-enhanced email function
 async function sendResultsEmail(email, orderData, results, comparisonReportMarkdown) {
   console.log('📨 Sending analysis results (no data logged for privacy)...');
   
@@ -252,14 +258,13 @@ async function sendResultsEmail(email, orderData, results, comparisonReportMarkd
   }
   
   try {
-    // Create privacy-compliant email data (minimal logging)
     const emailData = {
       service_id: process.env.EMAILJS_SERVICE_ID || 'service_6deh10r',
       template_id: process.env.EMAILJS_TEMPLATE_ID || 'template_test_results',
       user_id: process.env.EMAILJS_PUBLIC_KEY || 'WwSbSdi4EaiQMExvs',
       accessToken: process.env.EMAILJS_PRIVATE_KEY,
       template_params: {
-        email: email, // Keep as 'email' to match your existing template
+        email: email,
         order_number: orderData.orderNumber,
         prompt: `${getToolDisplayName(orderData.toolType || 'general')} Analysis`,
         ais: Object.keys(results).join(', '),
@@ -268,11 +273,7 @@ async function sendResultsEmail(email, orderData, results, comparisonReportMarkd
         report_content: comparisonReportMarkdown,
         user_id: orderData.userId || 'N/A',
         credits_used: orderData.creditsUsed,
-        credits_refunded: orderData.creditsRefunded || 0,
-        // Additional fields for specialized tools
-        analysis_type: getToolDisplayName(orderData.toolType || 'general'),
-        property_address: orderData.propertyAddress || 'N/A',
-        analysis_date: new Date().toLocaleDateString()
+        credits_refunded: orderData.creditsRefunded || 0
       }
     };
 
@@ -286,7 +287,6 @@ async function sendResultsEmail(email, orderData, results, comparisonReportMarkd
     const success = response.ok;
     console.log(`📬 Email delivery: ${success ? 'Success' : 'Failed'} (${response.status})`);
     
-    // Privacy: Don't log response details or email content
     return success;
   } catch (err) {
     console.error('🔥 Email delivery error (details not logged for privacy)');
@@ -328,7 +328,6 @@ exports.handler = async (event) => {
     console.log(`🔧 Processing ${isSpecializedTool ? 'specialized' : 'general'} analysis`);
     console.log(`💳 Credits: ${orderData.creditsUsed}`);
     console.log(`📋 Order: ${orderData.orderNumber}`);
-    // Note: No longer logging email or prompt content for privacy
     
     const selectedAIs = orderData.selectedAIs || ['Claude', 'Gemini', 'ChatGPT']; 
 
@@ -347,38 +346,53 @@ exports.handler = async (event) => {
     const results = {};
     let failedCount = 0;
     
-    // Process each selected AI
-    for (const ai of selectedAIs) {
+    // Process each selected AI with timeout protection
+    const aiPromises = selectedAIs.map(async (ai) => {
       const provider = providers[ai];
       const key = apiKeys[ai];
       
       if (!key) {
         console.log(`❌ Missing API key for ${ai}`);
-        results[ai] = { 
-          response: `Error: Missing API key for ${ai}`, 
-          analysis: { score: 0, pros: [], cons: ['Missing API key'] },
-          timestamp: new Date().toISOString()
+        return {
+          ai,
+          result: { 
+            response: `Error: Missing API key for ${ai}`, 
+            analysis: { score: 0, pros: [], cons: ['Missing API key'] },
+            timestamp: new Date().toISOString()
+          },
+          failed: true
         };
-        failedCount++;
-        continue;
       }
       
       console.log(`⚙️ Processing ${ai} ${isSpecializedTool ? 'specialized' : 'general'} analysis...`);
       const response = await callAI(provider, orderData.prompt, key);
       
-      if (response.includes('Error:')) {
-        failedCount++;
+      const failed = response.includes('Error:');
+      if (failed) {
         console.log(`❌ ${ai} analysis failed`);
       } else {
         console.log(`✅ ${ai} analysis completed successfully`);
       }
       
-      results[ai] = {
-        response: response,
-        analysis: analyzeResponse(response, provider, toolType),
-        timestamp: new Date().toISOString()
+      return {
+        ai,
+        result: {
+          response: response,
+          analysis: analyzeResponse(response, provider, toolType),
+          timestamp: new Date().toISOString()
+        },
+        failed
       };
-    }
+    });
+
+    // Wait for all AI responses with global timeout
+    const aiResults = await Promise.all(aiPromises);
+    
+    // Process results
+    aiResults.forEach(({ ai, result, failed }) => {
+      results[ai] = result;
+      if (failed) failedCount++;
+    });
 
     // Calculate credit refunds for failed analyses
     const creditsRefunded = failedCount;
@@ -423,7 +437,7 @@ exports.handler = async (event) => {
       body: JSON.stringify({ 
         success: true, 
         orderNumber: orderData.orderNumber, 
-        results, // Keep results for immediate feedback
+        results, 
         emailSent,
         creditInfo: creditInfo,
         toolType: toolType,
