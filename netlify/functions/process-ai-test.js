@@ -293,7 +293,7 @@ async function sendResultsEmail(email, orderNumber, prompt, results) {
     try {
         console.log('Sending email request to PHP endpoint...');
         
-        const response = await fetch('https://testaitools.online/api-backend/send-test-results.php', {
+        const response = await fetch('https://testaitools.online/api-backend/simple-text-email.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
