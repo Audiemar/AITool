@@ -305,16 +305,18 @@ async function sendResultsEmail(email, orderNumber, prompt, results) {
             })
         });
         
-        if (!response.ok) {
-            throw new Error(`Email API responded with ${response.status}`);
+        const result = await response.json();
+        console.log('Email API response:', result);
+        
+        if (!response.ok || !result.success) {
+            throw new Error(result.error || `Email API responded with ${response.status}`);
         }
         
-        const result = await response.json();
-        console.log('Email sent successfully:', result);
+        console.log('AI results email sent successfully:', result);
         return true;
         
     } catch (error) {
-        console.error('Failed to send email:', error);
+        console.error('Failed to send AI results email:', error);
         throw error;
     }
 }
