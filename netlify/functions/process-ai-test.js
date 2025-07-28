@@ -291,6 +291,8 @@ function getAIConfig(aiName) {
 
 async function sendResultsEmail(email, orderNumber, prompt, results) {
     try {
+        console.log('Sending email request to PHP endpoint...');
+        
         const response = await fetch('https://testaitools.online/api-backend/send-test-results.php', {
             method: 'POST',
             headers: {
@@ -305,11 +307,25 @@ async function sendResultsEmail(email, orderNumber, prompt, results) {
             })
         });
         
-        const result = await response.json();
-        console.log('Email API response:', result);
+        console.log('PHP response status:', response.status);
+        console.log('PHP response headers:', Object.fromEntries(response.headers.entries()));
+        
+        const rawText = await response.text();
+        console.log('PHP raw response:', rawText);
+        
+        let result;
+        try {
+            result = JSON.parse(rawText);
+        } catch (parseError) {
+            console.error('Failed to parse PHP response as JSON:', parseError);
+            console.error('Raw response was:', rawText);
+            throw new Error(`PHP returned invalid JSON: ${rawText.substring(0, 100)}...`);
+        }
+        
+        console.log('PHP parsed response:', result);
         
         if (!response.ok || !result.success) {
-            throw new Error(result.error || `Email API responded with ${response.status}`);
+            throw new Error(result.error || `PHP responded with ${response.status}: ${result.message || 'Unknown error'}`);
         }
         
         console.log('AI results email sent successfully:', result);
