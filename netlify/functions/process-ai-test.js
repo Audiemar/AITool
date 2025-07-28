@@ -35,7 +35,9 @@ exports.handler = async (event, context) => {
             userId,
             prompt,
             selectedAIs,
-            creditsUsed
+            creditsUsed,
+            toolType,        // ADD THIS - for medical detection
+            patientData      // ADD THIS - for patient info
         } = requestData;
 
         console.log(`Processing AI test for order: ${orderNumber}`);
@@ -94,10 +96,10 @@ exports.handler = async (event, context) => {
                 }
             }
 
-            // 3. Send email with results
+            // 3. Send email with results - UPDATED TO INCLUDE MEDICAL DATA
             let emailSent = false;
             try {
-                await sendResultsEmail(email, orderNumber, prompt, aiResults);
+                await sendResultsEmail(email, orderNumber, prompt, aiResults, toolType, patientData);
                 emailSent = true;
                 console.log('Results email sent successfully');
             } catch (emailError) {
@@ -309,11 +311,12 @@ function getAIConfig(aiName) {
     return configs[aiName];
 }
 
-async function sendResultsEmail(email, orderNumber, prompt, results) {
+// UPDATED EMAIL FUNCTION - Now includes medical data
+async function sendResultsEmail(email, orderNumber, prompt, results, toolType, patientData) {
     try {
         console.log('Sending email request to PHP endpoint...');
         
-        const response = await fetch('https://testaitools.online/api-backend/simple-text-email.php', {
+        const response = await fetch('https://testaitools.online/api-backend/send-test-results.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -323,6 +326,8 @@ async function sendResultsEmail(email, orderNumber, prompt, results) {
                 orderNumber: orderNumber,
                 prompt: prompt,
                 results: results,
+                toolType: toolType || '',          // ADD THIS
+                patientData: patientData || {},    // ADD THIS
                 netlifySecret: process.env.NETLIFY_SECRET_KEY || 'your-netlify-secret-key-2024'
             })
         });
