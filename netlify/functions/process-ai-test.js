@@ -205,6 +205,8 @@ async function processAI(aiName, prompt) {
     }
 
     try {
+        console.log(`Starting ${aiName} request...`);
+        
         const response = await fetch(config.url, {
             method: 'POST',
             headers: config.headers,
@@ -212,17 +214,35 @@ async function processAI(aiName, prompt) {
             signal: AbortSignal.timeout(30000) // 30 second timeout
         });
 
+        console.log(`${aiName} response status: ${response.status}`);
+        
         if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            const errorText = await response.text();
+            console.log(`${aiName} error response:`, errorText);
+            
+            // Handle specific error codes
+            if (response.status === 529) {
+                throw new Error('API temporarily overloaded - please try again in a few minutes');
+            } else if (response.status === 400) {
+                throw new Error('Invalid request - please check API configuration');
+            } else if (response.status === 401) {
+                throw new Error('Authentication failed - please check API key');
+            } else if (response.status === 403) {
+                throw new Error('Access forbidden - please check API permissions');
+            } else {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
         }
 
         const data = await response.json();
+        console.log(`${aiName} completed successfully`);
         return config.parseResponse(data);
 
     } catch (error) {
         if (error.name === 'TimeoutError') {
             throw new Error('Request timed out after 30 seconds');
         }
+        console.error(`${aiName} failed:`, error.message);
         throw new Error(`API request failed: ${error.message}`);
     }
 }
